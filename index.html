@@ -151,6 +151,8 @@ ul.sub li::before{content:"";position:absolute;left:0;top:.66em;width:5px;height
 
 .linkbox{display:flex;flex-direction:column;gap:9px}
 .linkbox a,.linkbox div.l{font-size:14px;color:#1967D2;font-family:var(--mono);text-decoration:none;word-break:break-all;line-height:1.5}
+.linkbox a:hover{text-decoration:underline}
+.linkbox a:focus-visible{outline:2px solid #8AB4F8;outline-offset:2px;border-radius:3px}
 
 .video{border-radius:16px;background:var(--ink);position:relative;overflow:hidden;display:grid;place-items:center;height:100%}
 .play{width:110px;height:110px;border-radius:50%;background:var(--red);display:grid;place-items:center;position:relative;z-index:2;
@@ -1265,15 +1267,15 @@ manager?.setAppFunctionEnabled(
         <div class="card">
           <h3><span class="dot b-blue"></span>공식 문서</h3>
           <div class="linkbox" style="margin-top:12px">
-            <div class="l">developer.android.com/ai/appfunctions</div>
-            <div class="l">developer.android.com/ai/appfunctions/add-appfunctions</div>
-            <div class="l">developer.android.com/tools/agents/android-cli</div>
+            <a href="https://developer.android.com/ai/appfunctions" target="_blank" rel="noopener">developer.android.com/ai/appfunctions</a>
+            <a href="https://developer.android.com/ai/appfunctions/add-appfunctions" target="_blank" rel="noopener">developer.android.com/ai/appfunctions/add-appfunctions</a>
+            <a href="https://developer.android.com/tools/agents/android-cli" target="_blank" rel="noopener">developer.android.com/tools/agents/android-cli</a>
           </div>
         </div>
         <div class="card">
           <h3><span class="dot b-red"></span>영상</h3>
           <div class="linkbox" style="margin-top:12px">
-            <div class="l">youtu.be/8PxuWdjESfg?t=1205 &nbsp;<span style="color:var(--ink-40)">(I/O Android Keynote 20:05~)</span></div>
+            <a href="https://youtu.be/8PxuWdjESfg?t=1205" target="_blank" rel="noopener">youtu.be/8PxuWdjESfg?t=1205</a><span style="color:var(--ink-40);font-family:var(--mono);font-size:14px"> &nbsp;(I/O Android Keynote 20:05~)</span>
           </div>
         </div>
       </div>
@@ -1281,14 +1283,14 @@ manager?.setAppFunctionEnabled(
         <div class="card">
           <h3><span class="dot b-grn"></span>샘플 &amp; 스킬</h3>
           <div class="linkbox" style="margin-top:12px">
-            <div class="l">github.com/android/appfunctions</div>
-            <div class="l">github.com/android/skills<br>&nbsp;&nbsp;/blob/main/device-ai/appfunctions/SKILL.md</div>
+            <a href="https://github.com/android/appfunctions" target="_blank" rel="noopener">github.com/android/appfunctions</a>
+            <a href="https://github.com/android/skills/blob/main/device-ai/appfunctions/SKILL.md" target="_blank" rel="noopener">github.com/android/skills<br>&nbsp;&nbsp;/blob/main/device-ai/appfunctions/SKILL.md</a>
           </div>
         </div>
         <div class="card">
           <h3><span class="dot b-yel"></span>라이브러리 소스</h3>
           <div class="linkbox" style="margin-top:12px">
-            <div class="l">github.com/androidx/androidx<br>&nbsp;&nbsp;/tree/androidx-main/appfunctions</div>
+            <a href="https://github.com/androidx/androidx/tree/androidx-main/appfunctions" target="_blank" rel="noopener">github.com/androidx/androidx<br>&nbsp;&nbsp;/tree/androidx-main/appfunctions</a>
           </div>
           <p style="margin-top:10px">API 표면 전체는 <code>appfunctions/api/current.txt</code>에서 한눈에 볼 수 있습니다.</p>
         </div>
