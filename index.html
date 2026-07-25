@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>App Functions Hands-on · 2026 I/O Extended</title>
+<style>
+:root{
+  /* Core Google */
+  --blue:#4285F4; --red:#EA4335; --yellow:#FBBC04; --green:#34A853;
+  --white:#FFFFFF; --ink:#202124;
+  --ink-70:#5F6368; --ink-40:#9AA0A6; --line:#E3E5E8;
+  --purple:#A142F4;
+  --mono:"SF Mono",ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+  --sans:"Google Sans",system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#0E0F11}
+body{font-family:var(--sans);-webkit-font-smoothing:antialiased}
+
+/* ---------- stage ---------- */
+#stage{position:fixed;inset:0;display:grid;place-items:center}
+#deck{width:1280px;height:720px;position:relative;transform-origin:center center;
+  border-radius:20px;overflow:hidden;box-shadow:0 40px 120px -40px rgba(0,0,0,.9)}
+.slide{position:absolute;inset:0;background:var(--white);color:var(--ink);
+  padding:52px 64px;display:none;flex-direction:column;overflow:hidden}
+.slide.on{display:flex;animation:in .35s cubic-bezier(.2,.7,.3,1)}
+@keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ---------- I/O gradient field ---------- */
+.field{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.field b{position:absolute;display:block;border-radius:50%;filter:blur(70px);opacity:.42}
+.f1{width:520px;height:520px;background:var(--blue);left:-160px;top:-200px}
+.f2{width:460px;height:460px;background:var(--purple);right:-140px;top:-180px;opacity:.34}
+.f3{width:420px;height:420px;background:var(--green);right:-120px;bottom:-200px;opacity:.32}
+.f4{width:380px;height:380px;background:var(--yellow);left:22%;bottom:-260px;opacity:.30}
+.f5{width:420px;height:420px;background:var(--red);right:24%;top:-240px;opacity:.24}
+
+/* ---------- covers (Grey 900) ---------- */
+.cover{background:var(--ink);color:var(--white);justify-content:center}
+.cover .field b{opacity:.55;filter:blur(90px)}
+.cover-in{position:relative;z-index:2}
+.kicker{font-size:15px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.62);font-weight:600}
+.cover h1{font-size:74px;line-height:1.06;letter-spacing:-.03em;font-weight:700;margin:22px 0 0}
+.cover h1 .g{background:linear-gradient(100deg,#8AB4F8,#C58AF9 45%,#F28B82);-webkit-background-clip:text;background-clip:text;color:transparent}
+.cover p{font-size:21px;color:rgba(255,255,255,.72);margin-top:24px;line-height:1.6}
+.presenter{margin-top:48px;display:flex;align-items:center;gap:14px;font-size:17px;color:rgba(255,255,255,.8)}
+.presenter .dots{display:flex;gap:5px}
+.presenter .dots i{width:9px;height:9px;border-radius:50%;display:block}
+
+/* ---------- section divider ---------- */
+.sec{background:var(--ink);color:var(--white);justify-content:center}
+.sec .field b{opacity:.5;filter:blur(90px)}
+.sec .num{position:relative;z-index:2;font-size:15px;letter-spacing:.24em;font-weight:700;
+  background:linear-gradient(90deg,#8AB4F8,#C58AF9);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sec h2{position:relative;z-index:2;font-size:60px;font-weight:700;letter-spacing:-.025em;margin-top:16px;line-height:1.12}
+.sec .lead{position:relative;z-index:2;font-size:20px;color:rgba(255,255,255,.7);margin-top:20px;max-width:760px;line-height:1.6}
+.sec .bar{position:relative;z-index:2;width:132px;height:6px;border-radius:99px;margin-top:38px;
+  background:linear-gradient(90deg,var(--blue),var(--red) 34%,var(--yellow) 67%,var(--green))}
+
+/* ---------- content heads ---------- */
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-40);
+  display:flex;align-items:center;gap:10px;position:relative;z-index:2}
+.eyebrow::before{content:"";width:22px;height:3px;border-radius:99px;background:linear-gradient(90deg,var(--blue),var(--purple))}
+h2.t{font-size:37px;font-weight:700;letter-spacing:-.022em;margin-top:12px;position:relative;z-index:2;line-height:1.2}
+h2.t small{display:block;font-size:16px;font-weight:500;color:var(--ink-70);margin-top:10px;letter-spacing:0}
+.body{position:relative;z-index:2;margin-top:24px;flex:1;min-height:0}
+
+/* ---------- primitives ---------- */
+.card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:19px 21px;
+  box-shadow:0 2px 0 rgba(32,33,36,.03)}
+.card h3{font-size:17px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;line-height:1.35}
+.card p{font-size:14.5px;color:var(--ink-70);line-height:1.6;margin-top:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.b-blue{background:var(--blue)}.b-red{background:var(--red)}.b-yel{background:var(--yellow)}.b-grn{background:var(--green)}
+
+ul.list{list-style:none;display:flex;flex-direction:column;gap:14px}
+ul.list li{font-size:18px;line-height:1.6;color:var(--ink);padding-left:30px;position:relative}
+ul.list li::before{content:"";position:absolute;left:0;top:.62em;width:11px;height:11px;border-radius:50%;
+  background:linear-gradient(135deg,var(--blue),var(--purple))}
+ul.list li b{font-weight:700}
+ul.list li span{display:block;font-size:15px;color:var(--ink-70);margin-top:5px;line-height:1.6}
+ul.sub{list-style:none;margin-top:8px;display:flex;flex-direction:column;gap:6px}
+ul.sub li{font-size:13.8px;color:var(--ink-70);padding-left:16px;position:relative;line-height:1.55}
+ul.sub li::before{content:"";position:absolute;left:0;top:.66em;width:5px;height:5px;border-radius:50%;background:var(--ink-40)}
+
+.tag{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:99px;
+  background:#F1F3F4;color:var(--ink-70);letter-spacing:.01em}
+.tag.blue{background:rgba(66,133,244,.12);color:#1967D2}
+.tag.red{background:rgba(234,67,53,.12);color:#C5221F}
+.tag.grn{background:rgba(52,168,83,.14);color:#188038}
+.tag.yel{background:rgba(251,188,4,.18);color:#A56E00}
+
+.note{border-left:4px solid var(--yellow);background:rgba(251,188,4,.08);border-radius:0 12px 12px 0;
+  padding:16px 20px;font-size:15.5px;line-height:1.65;color:var(--ink)}
+.note b{color:#A56E00}
+.warn{border-left-color:var(--red);background:rgba(234,67,53,.07)}
+.warn b{color:#C5221F}
+
+/* ---------- code / terminal ---------- */
+.code{background:var(--ink);color:#E8EAED;border-radius:14px;padding:20px 22px;font-family:var(--mono);
+  font-size:14px;line-height:1.72;overflow:hidden;white-space:pre;position:relative}
+.code.sm{font-size:11.8px;line-height:1.6}
+.code.xs{font-size:10.6px;line-height:1.55}
+.term{background:var(--ink);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.term-bar{display:flex;align-items:center;gap:7px;padding:11px 16px;background:rgba(255,255,255,.05);flex:none}
+.term-bar i{width:11px;height:11px;border-radius:50%;display:block}
+.term-bar span{margin-left:10px;font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.4)}
+.term-body{padding:18px 20px;font-family:var(--mono);font-size:13.5px;line-height:1.78;color:#E8EAED;
+  white-space:pre;overflow:hidden;flex:1;min-height:0}
+.term-body.sm{font-size:11.4px;line-height:1.66}
+.cm{color:#9AA0A6}                 /* comment */
+.kw{color:#8AB4F8}                 /* command */
+.st{color:#81C995}                 /* string / value */
+.fl{color:#FDD663}                 /* flag */
+.pr{color:#F28B82}                 /* prompt */
+.an{color:#C58AF9}                 /* annotation */
+.ty{color:#78D9EC}                 /* type */
+.mu{color:#5F6368}
+
+/* ---------- misc blocks ---------- */
+.steps{display:flex;flex-direction:column;gap:9px}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step .n{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  font-size:13px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--blue),var(--purple))}
+.step .tx{font-size:15px;line-height:1.5;padding-top:4px}
+.step .tx span{display:block;font-size:13px;color:var(--ink-70);margin-top:3px}
+
+.flow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.flow .n{background:#F8F9FA;border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-size:14.5px;font-weight:600}
+.flow .a{color:var(--ink-40);font-size:18px}
+
+.api{display:flex;flex-direction:column;gap:7px}
+.api .row{font-family:var(--mono);font-size:11.8px;line-height:1.5;color:var(--ink-70)}
+.api .row b{color:var(--ink);font-weight:600}
+
+.linkbox{display:flex;flex-direction:column;gap:9px}
+.linkbox a,.linkbox div.l{font-size:14px;color:#1967D2;font-family:var(--mono);text-decoration:none;word-break:break-all;line-height:1.5}
+
+.video{border-radius:16px;background:var(--ink);position:relative;overflow:hidden;display:grid;place-items:center;height:100%}
+.play{width:110px;height:110px;border-radius:50%;background:var(--red);display:grid;place-items:center;position:relative;z-index:2;
+  box-shadow:0 12px 40px -8px rgba(234,67,53,.6);transition:transform .2s ease,box-shadow .2s ease}
+.play::after{content:"";border-left:32px solid #fff;border-top:20px solid transparent;border-bottom:20px solid transparent;margin-left:8px}
+.video-link{display:block;width:100%;height:100%;cursor:pointer}
+.video-link .video{border-radius:0}
+.video-link:hover .play{transform:scale(1.08);box-shadow:0 18px 54px -8px rgba(234,67,53,.75)}
+.video-link:focus-visible{outline:3px solid #8AB4F8;outline-offset:-6px}
+@media (prefers-reduced-motion:reduce){.play{transition:none}}
+
+.diagram{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;display:block;
+  height:100%;min-height:0;overflow:hidden}
+.diagram img{display:block;width:100%;height:100%;object-fit:contain}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:10px 18px;font-size:15px;line-height:1.6}
+.kv dt{font-weight:700;color:var(--ink)}
+.kv dd{color:var(--ink-70)}
+
+/* ---------- chrome ---------- */
+.pageno{position:absolute;right:34px;bottom:24px;font-size:12px;font-family:var(--mono);color:var(--ink-40);z-index:5}
+.cover .pageno,.sec .pageno{color:rgba(255,255,255,.38)}
+.brandline{position:absolute;left:0;right:0;bottom:0;height:5px;z-index:5;
+  background:linear-gradient(90deg,var(--blue) 0 25%,var(--red) 25% 50%,var(--yellow) 50% 75%,var(--green) 75% 100%);opacity:.9}
+#bar{position:fixed;left:0;top:0;height:3px;z-index:99;background:linear-gradient(90deg,var(--blue),var(--purple),var(--red));transition:width .3s}
+#hint{position:fixed;right:14px;bottom:12px;z-index:99;font:12px var(--mono);color:#5F6368}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="stage"><div id="deck">
+
+<!-- 1 · TITLE -->
+<section class="slide cover">
+  <div class="field"><b class="f1"></b><b class="f2"></b><b class="f3"></b><b class="f4"></b><b class="f5"></b></div>
+  <div class="cover-in">
+    <div class="kicker">2026 Google I/O Extended · Hands-on</div>
+    <h1>Android <span class="g">App Functions</span><br>내 앱을 에이전트에게<br>연결하기</h1>
+    <p>@AppFunction 하나로, 내 앱의 기능을 AI Agent에게 제공할 수 있습니다.</p>
+    <div class="presenter">
+      <div class="dots"><i class="b-blue"></i><i class="b-red"></i><i class="b-yel"></i><i class="b-grn"></i></div>
+      류기민 · GDG Korea Android Organizer
+    </div>
+  </div>
+  <div class="brandline"></div>
+</section>
+
+<!-- 2 · 학습 목표 -->
+<section class="slide">
+  <div class="field"><b class="f1" style="opacity:.14"></b><b class="f3" style="opacity:.12"></b></div>
+  <div class="eyebrow">Learning Goals</div>
+  <h2 class="t">오늘 세션이 끝나면<br>이 세 가지를 할 수 있습니다</h2>
+  <div class="body">
+    <div class="grid3" style="height:100%;align-items:stretch">
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag blue">01 · Understand</span>
+        <h3 style="margin-top:16px">App Function의<br>개념과 동작 원리</h3>
+        <p>플랫폼이 앱의 기능을 어떻게 발견하고, 에이전트가 어떻게 호출하는지 전체 그림을 이해합니다.</p>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag red">02 · Build</span>
+        <h3 style="margin-top:16px">내 프로젝트에<br>App Function 추가</h3>
+        <p>의존성 추가부터 <code>AppFunctionService</code> 정의, 어노테이션 작성까지 직접 해봅니다.</p>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag grn">03 · Verify</span>
+        <h3 style="margin-top:16px">App Function을<br>테스트하는 방법</h3>
+        <p><code>adb</code> 직접 호출과 Testing Agent 두 가지 경로로 동작을 검증합니다.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">2</div>
+</section>
+
+<!-- 3 · AGENDA -->
+<section class="slide">
+  <div class="field"><b class="f2" style="opacity:.12"></b><b class="f4" style="opacity:.12"></b></div>
+  <div class="eyebrow">Agenda</div>
+  <h2 class="t">진행 순서</h2>
+  <div class="body">
+    <div class="grid3" style="height:100%">
+      <div class="card" style="display:flex;flex-direction:column;justify-content:space-between">
+        <div>
+          <div style="font:700 46px/1 var(--sans);background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent">01</div>
+          <h3 style="margin-top:14px">실습 환경 세팅</h3>
+          <ul class="sub" style="margin-top:12px">
+            <li>Android CLI 설치</li>
+            <li>주요 명령어 둘러보기</li>
+            <li>SDK 36 에뮬레이터 생성</li>
+          </ul>
+        </div>
+        <span class="tag">약 15분</span>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column;justify-content:space-between">
+        <div>
+          <div style="font:700 46px/1 var(--sans);background:linear-gradient(135deg,var(--red),var(--yellow));-webkit-background-clip:text;background-clip:text;color:transparent">02</div>
+          <h3 style="margin-top:14px">App Function 개요</h3>
+          <ul class="sub" style="margin-top:12px">
+            <li>정의와 사용 사례</li>
+            <li>작동 방식 &amp; 주요 어노테이션</li>
+            <li>프로젝트에 추가하는 법</li>
+          </ul>
+        </div>
+        <span class="tag">약 30분</span>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column;justify-content:space-between">
+        <div>
+          <div style="font:700 46px/1 var(--sans);background:linear-gradient(135deg,var(--green),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent">03</div>
+          <h3 style="margin-top:14px">직접 만들어보기</h3>
+          <ul class="sub" style="margin-top:12px">
+            <li>공식 샘플로 호출 체험</li>
+            <li>내 프로젝트에 구현</li>
+            <li>발표 &amp; 시상 🏆</li>
+          </ul>
+        </div>
+        <span class="tag">나머지 시간</span>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">3</div>
+</section>
+
+<!-- 4 · SECTION 1 -->
+<section class="slide sec">
+  <div class="field"><b class="f1"></b><b class="f2"></b><b class="f4"></b></div>
+  <div class="num">SECTION 01</div>
+  <h2>실습 환경 세팅</h2>
+  <div class="lead">Android Studio를 열기 전에, 터미널만으로 SDK와 에뮬레이터를 준비합니다.<br>새로 나온 <b style="color:#8AB4F8">Android CLI</b> 하나면 충분합니다.</div>
+  <div class="bar"></div>
+  <div class="pageno">4</div>
+</section>
+
+<!-- 5 · Android CLI 설치 -->
+<section class="slide">
+  <div class="field"><b class="f1" style="opacity:.13"></b><b class="f3" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 01 · Setup</div>
+  <h2 class="t">Android CLI 설치<small>Android 개발 환경을 터미널에서 통째로 다루는 새 공식 도구</small></h2>
+  <div class="body">
+    <div class="grid2" style="height:100%">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <h3><span class="dot b-blue"></span>무엇을 대체하나요?</h3>
+          <p><code>sdkmanager</code>, <code>avdmanager</code>, <code>emulator</code>, <code>adb</code>를 몰라도 됩니다.
+          SDK 설치 · 에뮬레이터 관리 · 프로젝트 생성 · 앱 배포까지 <b>단일 진입점</b>으로 묶여 있습니다.</p>
+        </div>
+        <div class="note">
+          <b>왜 지금 이걸 쓰나요?</b><br>AI 에이전트가 Android 개발 환경을 다룰 수 있도록 설계된 CLI입니다.
+          그래서 사람이 쓰기에도 명령어 체계가 훨씬 단순합니다.
+        </div>
+        <div class="card" style="margin-top:auto">
+          <h3><span class="dot b-grn"></span>공식 문서</h3>
+          <div class="linkbox" style="margin-top:10px">
+            <div class="l">developer.android.com/tools/agents/android-cli</div>
+            <div class="l">developer.android.com/tools/agents/android-cli/download</div>
+          </div>
+        </div>
+      </div>
+      <div class="term">
+        <div class="term-bar"><i class="b-red"></i><i class="b-yel"></i><i class="b-grn"></i><span>install</span></div>
+        <div class="term-body sm"><span class="cm"># macOS (Apple Silicon) / Linux — 설치 스크립트 한 줄</span>
+<span class="pr">$</span> <span class="kw">curl</span> <span class="fl">-fsSL</span> <span class="st">https://dl.google.com/android/cli/latest/\
+    darwin_arm64/install.sh</span> | <span class="kw">bash</span>
+
+<span class="cm"># 설치 확인</span>
+<span class="pr">$</span> <span class="kw">android</span> <span class="fl">-V</span>
+
+<span class="cm"># 환경 정보 — SDK 위치, JDK, 연결된 디바이스</span>
+<span class="pr">$</span> <span class="kw">android</span> <span class="kw">info</span>
+
+<span class="cm"># CLI 자체 업데이트</span>
+<span class="pr">$</span> <span class="kw">android</span> <span class="kw">update</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">5</div>
+</section>
+
+<!-- 6 · android -h -->
+<section class="slide">
+  <div class="field"><b class="f2" style="opacity:.12"></b><b class="f4" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 01 · Setup</div>
+  <h2 class="t">명령어 지도 <code style="font-size:.8em">android -h</code><small>오늘 실제로 쓸 명령어는 파란색으로 표시했습니다.</small></h2>
+  <div class="body">
+    <div class="term" style="height:100%">
+      <div class="term-bar"><i class="b-red"></i><i class="b-yel"></i><i class="b-grn"></i><span>android -h</span></div>
+      <div class="term-body sm"><span class="pr">$</span> <span class="kw">android</span> <span class="fl">-h</span>
+<span class="mu">Usage: android [-hV] [--sdk=PARAM] [COMMAND]</span>
+
+Commands:
+  <span class="kw">sdk</span>        <span class="cm">// SDK 패키지 설치 · 목록 · 업데이트  ← sdkmanager 역할</span>
+  <span class="kw">emulator</span>   <span class="cm">// AVD 생성 · 실행 · 중지 · 삭제      ← avdmanager + emulator 역할</span>
+  <span class="kw">create</span>     <span class="cm">// 새 Android 프로젝트 생성</span>
+  <span class="kw">run</span>        <span class="cm">// 앱 빌드 후 디바이스에 배포/실행</span>
+  <span class="kw">screen</span>     <span class="cm">// 디바이스 화면 보기 / 캡처</span>
+  <span class="kw">layout</span>     <span class="cm">// 실행 중인 앱의 레이아웃 트리 출력   ← 에이전트가 화면을 "읽는" 통로</span>
+  <span class="kw">describe</span>   <span class="cm">// 프로젝트 구조·메타데이터 분석</span>
+  <span class="kw">skills</span>     <span class="cm">// 스킬 관리 — App Functions 스킬도 여기서 (섹션 3에서 사용)</span>
+  <span class="kw">init</span>       <span class="cm">// 에이전트용 환경(스킬 등) 초기화</span>
+  <span class="mu">studio     // Android Studio 연동</span>
+  <span class="mu">docs       // 문서 검색</span>
+  <span class="mu">info       // 환경 정보 출력</span>
+  <span class="mu">update     // Android CLI 업데이트</span>
+
+<span class="cm"># 모든 서브커맨드는 -h 로 도움말을 볼 수 있습니다</span>
+<span class="pr">$</span> <span class="kw">android</span> <span class="kw">emulator</span> <span class="kw">create</span> <span class="fl">-h</span></div>
+    </div>
+  </div>
+  <div class="pageno">6</div>
+</section>
+
+<!-- 7 · 에뮬레이터 — AI 방식 -->
+<section class="slide">
+  <div class="field"><b class="f1" style="opacity:.14"></b><b class="f5" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 01 · Setup</div>
+  <h2 class="t">SDK 36 에뮬레이터 만들기 ① <span style="color:var(--purple)">AI에게 맡기기</span><small>App Functions는 API 36+ 에서만 동작합니다. 먼저 에뮬레이터부터 준비합니다.</small></h2>
+  <div class="body">
+    <div style="display:flex;flex-direction:column;gap:18px;height:100%">
+      <div style="border-radius:16px;padding:26px 30px;background:linear-gradient(100deg,rgba(66,133,244,.1),rgba(161,66,244,.1) 55%,rgba(234,67,53,.08));border:1px solid rgba(66,133,244,.22)">
+        <div class="tag blue">PROMPT</div>
+        <div style="font-size:26px;font-weight:600;margin-top:14px;line-height:1.5">
+          “<code>android</code> CLI를 이용하여 SDK 36 에뮬레이터를 생성해줘”
+        </div>
+      </div>
+      <div class="grid3" style="flex:1">
+        <div class="card">
+          <h3><span class="dot b-blue"></span>1. 환경 파악</h3>
+          <p>에이전트가 <code>android info</code>, <code>android sdk list</code>로 현재 SDK 상태를 스스로 확인합니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-yel"></span>2. 이미지 설치</h3>
+          <p>API 36 시스템 이미지가 없으면 <code>android sdk install</code>로 내려받습니다. (수 GB, 시간이 걸립니다)</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-grn"></span>3. 생성 &amp; 검증</h3>
+          <p><code>android emulator create</code> 후 <code>emulator list</code>로 결과까지 확인해서 알려줍니다.</p>
+        </div>
+      </div>
+      <div class="note"><b>실습 팁</b> · 지금 다운로드를 걸어두고, 받는 동안 섹션 2 이론을 함께 보겠습니다.</div>
+    </div>
+  </div>
+  <div class="pageno">7</div>
+</section>
+
+<!-- 8 · 에뮬레이터 — 직접 호출 -->
+<section class="slide">
+  <div class="field"><b class="f3" style="opacity:.12"></b><b class="f2" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 01 · Setup</div>
+  <h2 class="t">SDK 36 에뮬레이터 만들기 ② <span style="color:var(--blue)">직접 호출</span><small>AI가 실제로 무슨 일을 했는지 그대로 따라가 봅니다.</small></h2>
+  <div class="body">
+    <div class="term" style="height:100%">
+      <div class="term-bar"><i class="b-red"></i><i class="b-yel"></i><i class="b-grn"></i><span>zsh — API 36 emulator</span></div>
+      <div class="term-body sm"><span class="cm"># 1. 환경 확인 (SDK 위치 등)</span>
+<span class="pr">$</span> <span class="kw">android info</span>
+
+<span class="cm"># 2. 설치 가능한 패키지 확인</span>
+<span class="pr">$</span> <span class="kw">android sdk list</span>
+
+<span class="cm"># 3. API 36 시스템 이미지 설치  ← 가장 오래 걸리는 단계</span>
+<span class="pr">$</span> <span class="kw">android sdk install</span> <span class="st">system-images/android-36/google_apis_playstore/arm64-v8a</span>
+                        <span class="cm">↑ Intel/Windows/Linux 라면 x86_64</span>
+
+<span class="cm"># 4. 사용 가능한 디바이스 프로필 확인</span>
+<span class="pr">$</span> <span class="kw">android emulator create</span> <span class="fl">--list-profiles</span>
+  <span class="mu">small_phone  medium_phone  medium_tablet  small/medium/large_desktop</span>
+
+<span class="cm"># 5. 에뮬레이터 생성 (설치된 이미지 중 최신 버전을 자동 선택 → 3번이 필수)</span>
+<span class="pr">$</span> <span class="kw">android emulator create</span> <span class="st">medium_phone</span>
+
+<span class="cm"># 6~9. 확인 / 실행(부팅 완료까지 대기 후 리턴) / 중지 / 삭제</span>
+<span class="pr">$</span> <span class="kw">android emulator list</span>
+<span class="pr">$</span> <span class="kw">android emulator start</span> <span class="st">medium_phone</span>
+<span class="pr">$</span> <span class="kw">android emulator stop</span> <span class="st">medium_phone</span>
+<span class="pr">$</span> <span class="kw">android emulator remove</span> <span class="st">medium_phone</span></div>
+    </div>
+  </div>
+  <div class="pageno">8</div>
+</section>
+
+<!-- 9 · SECTION 2 -->
+<section class="slide sec">
+  <div class="field"><b class="f2"></b><b class="f5"></b><b class="f3"></b></div>
+  <div class="num">SECTION 02</div>
+  <h2>App Function 개요</h2>
+  <div class="lead">앱의 기능에 <b style="color:#C58AF9">어노테이션</b>만 붙이면 시스템이 색인해두고,<br>AI 에이전트가 그것을 발견해서 대신 호출합니다.</div>
+  <div class="bar"></div>
+  <div class="pageno">9</div>
+</section>
+
+<!-- 10 · 키노트 영상 -->
+<section class="slide" style="padding:0">
+  <a class="video-link" href="https://youtu.be/8PxuWdjESfg?t=1205" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+    <div class="video" style="border-radius:0">
+      <div class="field"><b class="f5" style="opacity:.4"></b><b class="f1" style="opacity:.35"></b></div>
+      <div class="play"></div>
+    </div>
+  </a>
+  <div class="pageno" style="color:rgba(255,255,255,.4)">10</div>
+</section>
+
+<!-- 11 · 정의 -->
+<section class="slide">
+  <div class="field"><b class="f1" style="opacity:.13"></b><b class="f3" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 02 · Overview</div>
+  <h2 class="t">App Function이란</h2>
+  <div class="body">
+    <div style="display:flex;flex-direction:column;gap:22px;height:100%">
+      <div style="font-size:31px;font-weight:600;line-height:1.5;letter-spacing:-.015em">
+        앱의 핵심 기능을 <span style="background:linear-gradient(100deg,var(--blue),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent">시스템과 AI 에이전트가 호출할 수 있는 함수</span>로<br>공개하는 Android API.
+      </div>
+      <div class="grid3" style="flex:1">
+        <div class="card">
+          <h3><span class="dot b-blue"></span>선언은 Kotlin 함수로</h3>
+          <p>별도 스키마 언어나 서버 등록이 없습니다. 기존 함수에 <code>@AppFunction</code>을 붙이면 끝입니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-red"></span>설명은 KDoc으로</h3>
+          <p><code>isDescribedByKDoc = true</code> — 여러분이 이미 쓰던 주석이 그대로 LLM을 위한 함수 설명이 됩니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-grn"></span>실행은 내 앱 안에서</h3>
+          <p>내 앱 프로세스 안에서, 내 권한으로 실행됩니다. 화면을 띄우지 않고 백그라운드 실행도 가능합니다.</p>
+        </div>
+      </div>
+      <div class="note"><b>핵심 전환</b> · 지금까지 앱은 <i>사람이 보는 화면</i>을 제공했습니다. App Functions는 여기에 <i>에이전트가 부르는 API</i>라는 두 번째 표면을 추가합니다.</div>
+    </div>
+  </div>
+  <div class="pageno">11</div>
+</section>
+
+<!-- 12 · 사용 사례 -->
+<section class="slide">
+  <div class="field"><b class="f4" style="opacity:.12"></b><b class="f2" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 02 · Use Cases</div>
+  <h2 class="t">어떤 앱에 어울릴까요<small>“사용자가 이 앱에서 반복적으로 하는 한 문장짜리 행동”이 곧 App Function 후보입니다.</small></h2>
+  <div class="body">
+    <div class="grid4" style="height:100%">
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag blue">예시 01</span>
+        <h3 style="margin-top:14px">할일 관리 &amp;<br>생산성</h3>
+        <p>할일 추가, 목록 조회, 완료 처리, 마감일 변경.</p>
+        <div style="margin-top:auto;padding-top:14px;font-size:13px;color:var(--ink-70);font-style:italic;line-height:1.55">“내일 오전까지 발표자료 준비 할일로 추가해줘”</div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag red">예시 02</span>
+        <h3 style="margin-top:14px">미디어 &amp;<br>엔터테인먼트</h3>
+        <p>곡·에피소드 재생, 플레이리스트 추가, 재생목록 검색.</p>
+        <div style="margin-top:auto;padding-top:14px;font-size:13px;color:var(--ink-70);font-style:italic;line-height:1.55">“운동할 때 듣던 플레이리스트 틀어줘”</div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag yel">예시 03</span>
+        <h3 style="margin-top:14px">앱 간<br>워크플로</h3>
+        <p>한 앱의 결과를 다른 앱의 입력으로. 에이전트가 두 함수를 이어 붙입니다.</p>
+        <div style="margin-top:auto;padding-top:14px;font-size:13px;color:var(--ink-70);font-style:italic;line-height:1.55">“방금 찍은 사진 가족 그룹방에 보내줘”</div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag grn">예시 04</span>
+        <h3 style="margin-top:14px">캘린더 &amp;<br>일정</h3>
+        <p>일정 생성·조회·변경, 참석자 추가, 빈 시간 찾기.</p>
+        <div style="margin-top:auto;padding-top:14px;font-size:13px;color:var(--ink-70);font-style:italic;line-height:1.55">“다음 주 화요일 오후에 회의 잡아줘”</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">12</div>
+</section>
+
+<!-- 13 · 예시 코드 (공식 문서 createTask) -->
+<section class="slide">
+  <div class="field"><b class="f1" style="opacity:.12"></b><b class="f4" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 02 · Use Cases</div>
+  <h2 class="t">예시 ① 할일 관리 — 코드로 보기<small>공식 문서 <code>add-appfunctions</code>의 <code>createTask</code> 예제. “할일로 추가해줘” 한 문장이 이 함수로 연결됩니다.</small></h2>
+  <div class="body">
+    <div style="display:grid;grid-template-columns:1.4fr .6fr;gap:22px;height:100%">
+      <div class="code xs" style="line-height:1.58"><span class="an">@RequiresApi</span>(<span class="st">36</span>)
+<span class="an">@AndroidEntryPoint</span>
+<span class="an">@AppFunctionServiceEntryPoint</span>(
+    serviceName = <span class="st">"TaskAppFunctionService"</span>,
+    appFunctionXmlFileName = <span class="st">"task_app_function_service"</span>,
+)
+<span class="kw">abstract class</span> <span class="ty">BaseTaskAppFunctionService</span> : <span class="ty">AppFunctionService</span>() {
+    <span class="an">@Inject</span> <span class="kw">internal lateinit var</span> taskRepository: <span class="ty">TaskRepository</span>
+
+    <span class="cm">/**
+     * Creates a task based on [createTaskParams].
+     *
+     * @param createTaskParams The parameter to describe how to create the task.
+     */</span>
+    <span class="an">@AppFunction</span>(isDescribedByKDoc = <span class="st">true</span>)
+    <span class="kw">suspend fun</span> <span class="ty">createTask</span>(createTaskParams: <span class="ty">CreateTaskParams</span>): <span class="ty">Task</span> =
+        <span class="kw">withContext</span>(<span class="ty">Dispatchers</span>.IO) {
+            <span class="kw">if</span> (createTaskParams.title == <span class="st">null</span> &amp;&amp; createTaskParams.content == <span class="st">null</span>)
+                <span class="kw">throw</span> <span class="ty">AppFunctionInvalidArgumentException</span>(<span class="st">"Title or content should be non-null"</span>)
+
+            <span class="kw">val</span> id = taskRepository.createTask(createTaskParams.title, createTaskParams.content)
+            <span class="kw">return</span>@withContext taskRepository.getTask(id)?.toTask()
+                ?: <span class="kw">throw</span> <span class="ty">AppFunctionElementNotFoundException</span>(<span class="st">"Task not found for ID = $id"</span>)
+        }
+}</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <h3><span class="dot b-blue"></span>KDoc = 함수 설명</h3>
+          <p><code>isDescribedByKDoc = true</code> — <i>“Creates a task…”</i> 주석이 그대로 에이전트가 읽는 명세가 됩니다.</p>
+        </div>
+        <div class="code sm" style="line-height:1.6"><span class="cm">// 파라미터 타입 (개념 예시)</span>
+<span class="an">@AppFunctionSerializable</span>
+<span class="kw">data class</span> <span class="ty">CreateTaskParams</span>(
+    <span class="cm">/** Title of the task. */</span>
+    <span class="kw">val</span> title: <span class="ty">String</span>? = <span class="st">null</span>,
+    <span class="cm">/** Content body. */</span>
+    <span class="kw">val</span> content: <span class="ty">String</span>? = <span class="st">null</span>,
+)</div>
+        <div class="note"><b>실패도 대화로</b> · 둘 다 비면 <code>AppFunctionInvalidArgumentException</code>을 던져, 에이전트가 사용자에게 다시 물어보게 합니다.</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">13</div>
+</section>
+
+<!-- 14 · 아키텍처 -->
+<section class="slide">
+  <div class="field"><b class="f1" style="opacity:.12"></b><b class="f3" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 02 · How it works</div>
+  <h2 class="t">App Functions 작동 방식</h2>
+  <div class="body">
+    <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:24px;height:100%">
+      <div class="diagram"><img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgdmVyc2lvbj0iMS4xIiB2aWV3Qm94PSIwIDAgMTA3MC45IDkxMy4zMiI+CiAgPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDMwLjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDIuMS4xIEJ1aWxkIDEyMykgIC0tPgogIDxkZWZzPgogICAgPHN0eWxlPgogICAgICAuc3QwLCAuc3QxLCAuc3QyIHsKICAgICAgICBmaWxsOiBub25lOwogICAgICB9CgogICAgICAuc3QzIHsKICAgICAgICBmaWxsOiAjZjNmM2YzOwogICAgICB9CgogICAgICAuc3QzLCAuc3Q0LCAuc3Q1LCAuc3Q2LCAuc3Q3LCAuc3Q4LCAuc3Q5IHsKICAgICAgICBmaWxsLXJ1bGU6IGV2ZW5vZGQ7CiAgICAgIH0KCiAgICAgIC5zdDQgewogICAgICAgIGZpbGw6ICNjZmUyZjM7CiAgICAgIH0KCiAgICAgIC5zdDUgewogICAgICAgIGZpbGw6ICM5ZmM1ZTg7CiAgICAgIH0KCiAgICAgIC5zdDEgewogICAgICAgIHN0cm9rZS13aWR0aDogMS43NnB4OwogICAgICB9CgogICAgICAuc3QxLCAuc3QyIHsKICAgICAgICBzdHJva2UtbGluZWpvaW46IHJvdW5kOwogICAgICB9CgogICAgICAuc3QxLCAuc3QyLCAuc3Q5IHsKICAgICAgICBzdHJva2U6ICMwMDA7CiAgICAgIH0KCiAgICAgIC5zdDYgewogICAgICAgIGZpbGw6ICNkOWQ5ZDk7CiAgICAgIH0KCiAgICAgIC5zdDcgewogICAgICAgIGZpbGw6ICNkOWVhZDM7CiAgICAgIH0KCiAgICAgIC5zdDIsIC5zdDkgewogICAgICAgIHN0cm9rZS13aWR0aDogNS4yOXB4OwogICAgICB9CgogICAgICAuc3Q4IHsKICAgICAgICBmaWxsLW9wYWNpdHk6IDA7CiAgICAgIH0KCiAgICAgIC5zdDEwIHsKICAgICAgICBjbGlwLXBhdGg6IHVybCgjY2xpcHBhdGgpOwogICAgICB9CgogICAgICAuc3Q5IHsKICAgICAgICBzdHJva2UtbWl0ZXJsaW1pdDogMTA7CiAgICAgIH0KICAgIDwvc3R5bGU+CiAgICA8Y2xpcFBhdGggaWQ9ImNsaXBwYXRoIj4KICAgICAgPHJlY3QgY2xhc3M9InN0MCIgd2lkdGg9IjEyODAiIGhlaWdodD0iOTYwIi8+CiAgICA8L2NsaXBQYXRoPgogIDwvZGVmcz4KICA8ZyBjbGFzcz0ic3QxMCI+CiAgICA8Zz4KICAgICAgPHBhdGggY2xhc3M9InN0OCIgZD0iTTAsMGgxMjgwdjk2MEgwVjBaIi8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDMiIGQ9Ik0tMi43NCwwaDEwNzMuNjR2OTEzLjMySC0yLjc0VjBaIi8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDQiIGQ9Ik0yMzcuMDIsNDAuOWgwYzAtMTIuOTksMTAuNTMtMjMuNTIsMjMuNTItMjMuNTJoNTQ2LjYxYzYuMjQsMCwxMi4yMiwyLjQ4LDE2LjYzLDYuODksNC40MSw0LjQxLDYuODksMTAuMzksNi44OSwxNi42M3YxNTIuODRjMCwxMi45OS0xMC41MywyMy41Mi0yMy41MiwyMy41MkgyNjAuNTRjLTEyLjk5LDAtMjMuNTItMTAuNTMtMjMuNTItMjMuNTJWNDAuOVoiLz4KICAgICAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTIzNy4wMiw0MC45aDBjMC0xMi45OSwxMC41My0yMy41MiwyMy41Mi0yMy41Mmg1NDYuNjFjNi4yNCwwLDEyLjIyLDIuNDgsMTYuNjMsNi44OSw0LjQxLDQuNDEsNi44OSwxMC4zOSw2Ljg5LDE2LjYzdjE1Mi44NGMwLDEyLjk5LTEwLjUzLDIzLjUyLTIzLjUyLDIzLjUySDI2MC41NGMtMTIuOTksMC0yMy41Mi0xMC41My0yMy41Mi0yMy41MlY0MC45WiIvPgogICAgICA8cGF0aCBkPSJNMjg4LjY0LDEzMS43MmgtNi4zbC0yLjUtNi41aC0xMS40NGwtMi4zNiw2LjVoLTYuMTRsMTEuMTYtMjguNjRoNi4xMWwxMS40NywyOC42NFpNMjc4LDEyMC4zOWwtMy45NS0xMC42Mi0zLjg2LDEwLjYyaDcuODFaTTI5MS4xNiwxMzMuMWw2LjI4Ljc1Yy4xLjczLjM0LDEuMjMuNzIsMS41Mi41Mi4zOSwxLjM0LjU4LDIuNDUuNTgsMS40NCwwLDIuNTItLjIxLDMuMjMtLjY0LjQ4LS4yOS44NC0uNzYsMS4wOS0xLjM5LjE3LS40Ni4yNS0xLjMuMjUtMi41MnYtMy4wM2MtMS42NSwyLjI0LTMuNzIsMy4zNi02LjIyLDMuMzYtMi43OCwwLTQuOTgtMS4xOC02LjYxLTMuNTMtMS4yOC0xLjg2LTEuOTItNC4xOC0xLjkyLTYuOTUsMC0zLjQ4LjgzLTYuMTQsMi41LTcuOTcsMS42OC0xLjg0LDMuNzYtMi43Nyw2LjI1LTIuNzdzNC42OCwxLjEzLDYuMzQsMy4zOXYtMi45Mmg1LjE0djE4LjYzYzAsMi40NS0uMiw0LjI4LS42MSw1LjQ4LS40LDEuMjEtLjk2LDIuMTYtMS42OSwyLjg0LS43My43LTEuNywxLjI0LTIuOTIsMS42Mi0xLjIyLjQtMi43Ni41OS00LjYyLjU5LTMuNTEsMC02LjAxLS42LTcuNDgtMS44MS0xLjQ3LTEuMi0yLjItMi43Mi0yLjItNC41OCwwLS4xOCwwLS40LjAyLS42NlpNMjk2LjA2LDEyMC45MmMwLDIuMi40MywzLjgxLDEuMjgsNC44My44NSwxLjAyLDEuOTEsMS41MywzLjE2LDEuNTMsMS4zNCwwLDIuNDctLjUyLDMuMzktMS41Ni45My0xLjA1LDEuMzktMi42MSwxLjM5LTQuNjdzLS40NC0zLjc0LTEuMzMtNC43OGMtLjg5LTEuMDQtMi4wMS0xLjU2LTMuMzYtMS41NnMtMi40LjUxLTMuMjUsMS41M2MtLjg1LDEuMDItMS4yOCwyLjU4LTEuMjgsNC42OVpNMzI4LjEyLDEyNS4xMWw1LjQ3LjkyYy0uNzEsMi4wMS0xLjgyLDMuNTQtMy4zNCw0LjU5LTEuNTEsMS4wNC0zLjQxLDEuNTYtNS42OSwxLjU2LTMuNiwwLTYuMjctMS4xOC04LTMuNTMtMS4zOC0xLjktMi4wNi00LjI4LTIuMDYtNy4xNiwwLTMuNDQuOS02LjEzLDIuNjktOC4wOCwxLjgtMS45NSw0LjA4LTIuOTIsNi44My0yLjkyLDMuMDgsMCw1LjUyLDEuMDIsNy4zLDMuMDYsMS43OSwyLjA0LDIuNjUsNS4xNiwyLjU2LDkuMzZoLTEzLjc1Yy4wNCwxLjY0LjQ4LDIuOTEsMS4zMywzLjgxLjg1LjksMS45MSwxLjM0LDMuMTcsMS4zNC44NSwwLDEuNTctLjIzLDIuMTYtLjcuNTktLjQ3LDEuMDQtMS4yMiwxLjM0LTIuMjdaTTMyOC40MywxMTkuNTZjLS4wNC0xLjU4LS40NS0yLjc5LTEuMjMtMy42MS0uNzgtLjgzLTEuNzMtMS4yNS0yLjg2LTEuMjUtMS4yLDAtMi4xOS40NC0yLjk3LDEuMzFzLTEuMTYsMi4wNi0xLjE0LDMuNTVoOC4yWk0zNTcuMjEsMTMxLjcyaC01LjQ4di0xMC41OWMwLTIuMjQtLjEyLTMuNjktLjM2LTQuMzQtLjIzLS42Ni0uNjEtMS4xNy0xLjE0LTEuNTMtLjUyLS4zNi0xLjE1LS41NS0xLjg5LS41NS0uOTYsMC0xLjgyLjI2LTIuNTguNzgtLjc1LjUyLTEuMjcsMS4yMS0xLjU1LDIuMDgtLjI3Ljg1LS40MSwyLjQ0LS40MSw0Ljc3djkuMzloLTUuNXYtMjAuNzVoNS4xMXYzLjA1YzEuOC0yLjM0LDQuMDgtMy41Miw2LjgzLTMuNTIsMS4yMSwwLDIuMzEuMjIsMy4zMS42NiwxLjAxLjQ0LDEuNzcuOTksMi4yOCwxLjY3LjUyLjY4Ljg4LDEuNDUsMS4wOCwyLjMxLjIuODUuMywyLjA4LjMsMy42OXYxMi44OVpNMzcyLjMsMTEwLjk3djQuMzhoLTMuNzV2OC4zNmMwLDEuNy4wMywyLjY5LjA5LDIuOTcuMDcuMjguMjMuNTIuNDguNy4yNi4xOC41Ny4yNy45NC4yNy41MSwwLDEuMjQtLjE4LDIuMi0uNTNsLjQ3LDQuMjVjLTEuMjcuNTUtMi43MS44My00LjMzLjgzLS45OSwwLTEuODktLjE3LTIuNjktLjUtLjc5LS4zMy0xLjM4LS43Ni0xLjc1LTEuMjgtLjM2LS41My0uNjItMS4yNC0uNzctMi4xNC0uMTEtLjY1LS4xNy0xLjk0LS4xNy0zLjg4di05LjA1aC0yLjUydi00LjM4aDIuNTJ2LTQuMTFsNS41Mi0zLjJ2Ny4zMWgzLjc1Wk0zOTEuMzEsMTE3LjNsLTQuOTctLjg5Yy41NS0yLjAxLDEuNTEtMy40OSwyLjg4LTQuNDUsMS4zOC0uOTcsMy40MS0xLjQ1LDYuMTEtMS40NSwyLjQ1LDAsNC4yNy4yOSw1LjQ3Ljg4LDEuMi41OCwyLjA0LDEuMzIsMi41MiwyLjIyLjQ5Ljg5LjczLDIuNTIuNzMsNC45MWwtLjA1LDYuNDFjMCwxLjgyLjA4LDMuMTcuMjUsNC4wMy4xOC44Ni41MSwxLjc5LDEsMi43OGgtNS40NGMtLjE1LS4zNi0uMzItLjkxLS41My0xLjYyLS4wOC0uMzItLjE1LS41NC0uMTktLjY0LS45NC45MS0xLjk0LDEuNTktMy4wMiwyLjA1LTEuMDYuNDYtMi4yLjY5LTMuNDEuNjktMi4xNCwwLTMuODItLjU4LTUuMDYtMS43My0xLjIzLTEuMTctMS44NC0yLjY0LTEuODQtNC40MSwwLTEuMTcuMjgtMi4yMS44NC0zLjEyLjU2LS45MiwxLjM1LTEuNjIsMi4zNi0yLjExLDEuMDEtLjQ5LDIuNDYtLjkyLDQuMzYtMS4yOCwyLjU2LS40OCw0LjM0LS45Myw1LjMzLTEuMzR2LS41NWMwLTEuMDYtLjI2LTEuODItLjc4LTIuMjctLjUyLS40NS0xLjUtLjY3LTIuOTQtLjY3LS45OCwwLTEuNzQuMTktMi4zLjU4LS41NC4zOS0uOTgsMS4wNi0xLjMzLDIuMDJaTTM5OC42NiwxMjEuNzVjLS43LjI0LTEuODEuNTItMy4zNC44NC0xLjUyLjMyLTIuNTIuNjQtMi45OC45NS0uNzEuNTEtMS4wNiwxLjE2LTEuMDYsMS45NHMuMjksMS40NC44NiwyYy41Ny41NSwxLjMuODMsMi4xOS44My45OSwwLDEuOTMtLjMyLDIuODMtLjk3LjY3LS41LDEuMS0xLjEsMS4zMS0xLjgxLjE0LS40Ny4yLTEuMzYuMi0yLjY5di0xLjA5Wk00MDkuMzEsMTEwLjk3aDUuMTF2My4wNWMuNjctMS4wNCwxLjU3LTEuODksMi43LTIuNTMsMS4xNC0uNjYsMi4zOS0uOTgsMy43Ny0uOTgsMi40MSwwLDQuNDUuOTUsNi4xMiwyLjg0LDEuNjksMS44OSwyLjUzLDQuNTIsMi41Myw3Ljg5cy0uODUsNi4xNS0yLjU1LDguMDhjLTEuNjksMS45Mi0zLjczLDIuODgtNi4xNCwyLjg4LTEuMTUsMC0yLjE5LS4yMy0zLjEyLS42OS0uOTMtLjQ2LTEuOTEtMS4yNC0yLjk0LTIuMzR2MTAuNDVoLTUuNDh2LTI4LjY0Wk00MTQuNzMsMTIxYzAsMi4zMi40Niw0LjA0LDEuMzksNS4xNi45MywxLjExLDIuMDUsMS42NywzLjM4LDEuNjdzMi4zNC0uNTEsMy4xOS0xLjUzYy44NC0xLjAyLDEuMjctMi43LDEuMjctNS4wMywwLTIuMTgtLjQ0LTMuNzktMS4zMS00Ljg0LS44Ni0xLjA1LTEuOTQtMS41OC0zLjIzLTEuNThzLTIuNDYuNTItMy4zNCwxLjU2Yy0uODksMS4wMy0xLjMzLDIuNTYtMS4zMyw0LjU5Wk00MzMuNzQsMTEwLjk3aDUuMTF2My4wNWMuNjctMS4wNCwxLjU3LTEuODksMi43LTIuNTMsMS4xNC0uNjYsMi4zOS0uOTgsMy43Ny0uOTgsMi40MSwwLDQuNDUuOTUsNi4xMiwyLjg0LDEuNjksMS44OSwyLjUzLDQuNTIsMi41Myw3Ljg5cy0uODUsNi4xNS0yLjU1LDguMDhjLTEuNjksMS45Mi0zLjczLDIuODgtNi4xNCwyLjg4LTEuMTUsMC0yLjE5LS4yMy0zLjEyLS42OS0uOTMtLjQ2LTEuOTEtMS4yNC0yLjk0LTIuMzR2MTAuNDVoLTUuNDh2LTI4LjY0Wk00MzkuMTYsMTIxYzAsMi4zMi40Niw0LjA0LDEuMzksNS4xNi45MywxLjExLDIuMDUsMS42NywzLjM4LDEuNjdzMi4zNC0uNTEsMy4xOS0xLjUzYy44NC0xLjAyLDEuMjctMi43LDEuMjctNS4wMywwLTIuMTgtLjQ0LTMuNzktMS4zMS00Ljg0LS44Ni0xLjA1LTEuOTQtMS41OC0zLjIzLTEuNThzLTIuNDYuNTItMy4zNCwxLjU2Yy0uODksMS4wMy0xLjMzLDIuNTYtMS4zMyw0LjU5WiIvPgogICAgICA8cGF0aCBjbGFzcz0ic3Q1IiBkPSJNNTA3LjExLDY5Ljc3aDI4My45NHYxMDQuODhoLTI4My45NHYtMTA0Ljg4WiIvPgogICAgICA8cGF0aCBjbGFzcz0ic3QxIiBkPSJNNTA3LjExLDY5Ljc3aDI4My45NHYxMDQuODhoLTI4My45NHYtMTA0Ljg4WiIvPgogICAgICA8cGF0aCBkPSJNNTM3LjUyLDExNC44di0yMy41NWgxNS44OHYyLjc4aC0xMi43N3Y3LjNoMTEuMDV2Mi43N2gtMTEuMDV2MTAuN2gtMy4xMVpNNTY4LjI1LDExNC44di0yLjVjLTEuMzIsMS45My0zLjEyLDIuODktNS40MSwyLjg5LTEuMDEsMC0xLjk1LS4xOS0yLjgzLS41OC0uODYtLjM5LTEuNTEtLjg3LTEuOTQtMS40NS0uNDMtLjU4LS43Mi0xLjMtLjg5LTIuMTYtLjExLS41Ni0uMTctMS40Ni0uMTctMi42OXYtMTAuNThoMi44OXY5LjQ3YzAsMS41MS4wNiwyLjUzLjE3LDMuMDUuMTguNzYuNTYsMS4zNiwxLjE0LDEuOC41OS40MywxLjMzLjY0LDIuMi42NHMxLjY4LS4yMiwyLjQ0LS42NmMuNzYtLjQ1LDEuMy0xLjA1LDEuNjEtMS44MS4zMi0uNzcuNDgtMS44OS40OC0zLjM0di05LjE0aDIuODl2MTcuMDZoLTIuNTlaTTU3NS4zNywxMTQuOHYtMTcuMDZoMi41OXYyLjQ0YzEuMjYtMS44OCwzLjA3LTIuODEsNS40NC0yLjgxLDEuMDIsMCwxLjk2LjE5LDIuODMuNTYuODYuMzYsMS41MS44NSwxLjk0LDEuNDUuNDMuNTkuNzIsMS4zLjg5LDIuMTIuMTEuNTMuMTcsMS40Ny4xNywyLjgxdjEwLjQ4aC0yLjg5di0xMC4zOGMwLTEuMTgtLjExLTIuMDYtLjM0LTIuNjQtLjIyLS41OC0uNjEtMS4wNS0xLjE5LTEuMzktLjU3LS4zNS0xLjI0LS41My0yLjAyLS41My0xLjI0LDAtMi4zMS4zOS0zLjIsMS4xNy0uODkuNzgtMS4zMywyLjI3LTEuMzMsNC40NXY5LjMxaC0yLjg5Wk02MDQuNzksMTA4LjU1bDIuODQuMzhjLS4zMSwxLjk2LTEuMTEsMy40OS0yLjM5LDQuNjEtMS4yNywxLjEtMi44NCwxLjY2LTQuNywxLjY2LTIuMzMsMC00LjIxLS43Ni01LjY0LTIuMjgtMS40Mi0xLjUzLTIuMTItMy43Mi0yLjEyLTYuNTgsMC0xLjgzLjMtMy40NC45MS00LjgzLjYxLTEuMzksMS41NS0yLjQyLDIuOC0zLjExczIuNjEtMS4wMyw0LjA4LTEuMDNjMS44NSwwLDMuMzcuNDcsNC41NSwxLjQxLDEuMTguOTQsMS45MywyLjI3LDIuMjUsMy45OGwtMi44LjQ0Yy0uMjctMS4xNS0uNzUtMi4wMS0xLjQ0LTIuNTgtLjY4LS41OC0xLjQ5LS44OC0yLjQ1LS44OC0xLjQ2LDAtMi42NS41Mi0zLjU2LDEuNTYtLjkxLDEuMDQtMS4zNiwyLjY5LTEuMzYsNC45NXMuNDQsMy45NiwxLjMxLDVjLjg5LDEuMDQsMi4wNCwxLjU2LDMuNDUsMS41NiwxLjE0LDAsMi4wOC0uMzUsMi44NC0xLjA1Ljc2LS43LDEuMjQtMS43NywxLjQ0LTMuMjJaTTYxNi40MiwxMTIuMjJsLjQxLDIuNTVjLS44MS4xNy0xLjU0LjI1LTIuMTcuMjUtMS4wNSwwLTEuODctLjE2LTIuNDUtLjQ4LS41Ny0uMzMtLjk4LS43Ny0xLjIyLTEuMzEtLjIzLS41NC0uMzQtMS42OC0uMzQtMy40MnYtOS44MWgtMi4xMnYtMi4yNWgyLjEydi00LjIybDIuODgtMS43M3Y1Ljk1aDIuOTF2Mi4yNWgtMi45MXY5Ljk4YzAsLjgyLjA1LDEuMzUuMTQsMS41OS4xLjIzLjI3LjQyLjUuNTYuMjMuMTQuNTYuMi45OC4yLjMyLDAsLjc1LS4wNCwxLjI4LS4xMVpNNjE5LjI2LDk0LjU4di0zLjMzaDIuODl2My4zM2gtMi44OVpNNjE5LjI2LDExNC44di0xNy4wNmgyLjg5djE3LjA2aC0yLjg5Wk02MjUuNDgsMTA2LjI3YzAtMy4xNi44OC01LjQ5LDIuNjItNy4wMiwxLjQ3LTEuMjYsMy4yNi0xLjg5LDUuMzgtMS44OSwyLjM0LDAsNC4yNi43Nyw1Ljc1LDIuMzEsMS40OSwxLjUzLDIuMjMsMy42NSwyLjIzLDYuMzYsMCwyLjItLjMzLDMuOTMtMSw1LjE5LS42NiwxLjI1LTEuNjEsMi4yMi0yLjg4LDIuOTItMS4yNS43LTIuNjIsMS4wNS00LjExLDEuMDUtMi4zOSwwLTQuMzItLjc3LTUuOC0yLjMtMS40Ny0xLjUzLTIuMi0zLjc0LTIuMi02LjYyWk02MjguNDQsMTA2LjI3YzAsMi4xOS40NywzLjgzLDEuNDIsNC45Mi45NiwxLjA4LDIuMTYsMS42MiwzLjYxLDEuNjJzMi42MS0uNTUsMy41Ni0xLjY0Yy45Ni0xLjA5LDEuNDQtMi43NiwxLjQ0LTUsMC0yLjEtLjQ4LTMuNy0xLjQ0LTQuNzgtLjk2LTEuMDktMi4xNS0xLjY0LTMuNTYtMS42NHMtMi42NS41NC0zLjYxLDEuNjJjLS45NSwxLjA4LTEuNDIsMi43MS0xLjQyLDQuODlaTTY0NC44NSwxMTQuOHYtMTcuMDZoMi41OXYyLjQ0YzEuMjYtMS44OCwzLjA3LTIuODEsNS40NC0yLjgxLDEuMDIsMCwxLjk2LjE5LDIuODMuNTYuODYuMzYsMS41MS44NSwxLjk0LDEuNDUuNDMuNTkuNzIsMS4zLjg5LDIuMTIuMTEuNTMuMTcsMS40Ny4xNywyLjgxdjEwLjQ4aC0yLjg5di0xMC4zOGMwLTEuMTgtLjExLTIuMDYtLjM0LTIuNjQtLjIyLS41OC0uNjEtMS4wNS0xLjE5LTEuMzktLjU3LS4zNS0xLjI0LS41My0yLjAyLS41My0xLjI0LDAtMi4zMS4zOS0zLjIsMS4xNy0uODkuNzgtMS4zMywyLjI3LTEuMzMsNC40NXY5LjMxaC0yLjg5Wk02ODMuNCwxMDguNTVsMi44NC4zOGMtLjMxLDEuOTYtMS4xMSwzLjQ5LTIuMzksNC42MS0xLjI3LDEuMS0yLjg0LDEuNjYtNC43LDEuNjYtMi4zMywwLTQuMjEtLjc2LTUuNjQtMi4yOC0xLjQyLTEuNTMtMi4xMi0zLjcyLTIuMTItNi41OCwwLTEuODMuMy0zLjQ0LjkxLTQuODMuNjEtMS4zOSwxLjU1LTIuNDIsMi44LTMuMTFzMi42MS0xLjAzLDQuMDgtMS4wM2MxLjg1LDAsMy4zNy40Nyw0LjU1LDEuNDEsMS4xOC45NCwxLjkzLDIuMjcsMi4yNSwzLjk4bC0yLjguNDRjLS4yNy0xLjE1LS43NS0yLjAxLTEuNDQtMi41OC0uNjgtLjU4LTEuNDktLjg4LTIuNDUtLjg4LTEuNDYsMC0yLjY1LjUyLTMuNTYsMS41Ni0uOTEsMS4wNC0xLjM2LDIuNjktMS4zNiw0Ljk1cy40NCwzLjk2LDEuMzEsNWMuODksMS4wNCwyLjA0LDEuNTYsMy40NSwxLjU2LDEuMTQsMCwyLjA4LS4zNSwyLjg0LTEuMDUuNzYtLjcsMS4yNC0xLjc3LDEuNDQtMy4yMlpNNjk5Ljg1LDExMi42OWMtMS4wNy45Mi0yLjEsMS41Ni0zLjA5LDEuOTQtLjk5LjM4LTIuMDUuNTYtMy4xOS41Ni0xLjg3LDAtMy4zMi0uNDYtNC4zMy0xLjM4LTEtLjkyLTEuNS0yLjA5LTEuNS0zLjUyLDAtLjgzLjE5LTEuNTkuNTYtMi4yOC4zOS0uNy44OS0xLjI2LDEuNS0xLjY3LjYxLS40MiwxLjMxLS43MywyLjA4LS45NC41Ny0uMTYsMS40My0uMywyLjU4LS40NCwyLjMzLS4yOCw0LjA1LS42MSw1LjE2LTEsLjAxLS40LjAyLS42NS4wMi0uNzUsMC0xLjE4LS4yOC0yLjAxLS44My0yLjQ4LS43NC0uNjYtMS44My0uOTgtMy4yOC0uOTgtMS4zNiwwLTIuMzcuMjQtMy4wMi43Mi0uNjUuNDctMS4xMiwxLjMxLTEuNDQsMi41M2wtMi44My0uMzljLjI2LTEuMjEuNjgtMi4xOCwxLjI3LTIuOTIuNTktLjc1LDEuNDQtMS4zMiwyLjU1LTEuNzIsMS4xMS0uNDEsMi40MS0uNjEsMy44OC0uNjFzMi42NC4xNywzLjU1LjUyYy45Mi4zNCwxLjU5Ljc4LDIuMDIsMS4zLjQzLjUxLjcyLDEuMTYuODksMS45NS4xLjUuMTYsMS4zOS4xNiwyLjY3djMuODZjMCwyLjY5LjA2LDQuMzkuMTcsNS4wOS4xMy43MS4zNywxLjM5LjczLDIuMDVoLTMuMDJjLS4zLS42LS40OS0xLjMxLS41OC0yLjExWk02OTkuNjEsMTA2LjI0Yy0xLjA1LjQzLTIuNjMuNzktNC43MywxLjA5LTEuMTkuMTgtMi4wMy4zOC0yLjUyLjU5LS40OS4yMS0uODcuNTItMS4xNC45NC0uMjcuNDEtLjQxLjg2LS40MSwxLjM2LDAsLjc3LjI5LDEuNDIuODgsMS45NC41OC41MSwxLjQ0Ljc3LDIuNTYuNzdzMi4xLS4yNCwyLjk3LS43M2MuODgtLjQ5LDEuNTItMS4xNiwxLjkyLTIsLjMxLS42Ni40Ny0xLjYyLjQ3LTIuODl2LTEuMDZaTTcwNi45NSwxMTQuOHYtMjMuNTVoMi44OXYyMy41NWgtMi44OVpNNzE0LjI2LDExNC44di0yMy41NWgyLjg5djIzLjU1aC0yLjg5Wk03MjEuNjQsOTQuNTh2LTMuMzNoMi44OXYzLjMzaC0yLjg5Wk03MjEuNjQsMTE0Ljh2LTE3LjA2aDIuODl2MTcuMDZoLTIuODlaTTcyOC45NCwxMTQuOHYtMTcuMDZoMi41OXYyLjQ0YzEuMjYtMS44OCwzLjA3LTIuODEsNS40NC0yLjgxLDEuMDIsMCwxLjk2LjE5LDIuODMuNTYuODYuMzYsMS41MS44NSwxLjk0LDEuNDUuNDMuNTkuNzIsMS4zLjg5LDIuMTIuMTEuNTMuMTcsMS40Ny4xNywyLjgxdjEwLjQ4aC0yLjg5di0xMC4zOGMwLTEuMTgtLjExLTIuMDYtLjM0LTIuNjQtLjIyLS41OC0uNjEtMS4wNS0xLjE5LTEuMzktLjU3LS4zNS0xLjI0LS41My0yLjAyLS41My0xLjI0LDAtMi4zMS4zOS0zLjIsMS4xNy0uODkuNzgtMS4zMywyLjI3LTEuMzMsNC40NXY5LjMxaC0yLjg5Wk03NDYuNywxMTYuMjFsMi44MS40MmMuMTEuODYuNDQsMS40OS45NywxLjg5LjcyLjU0LDEuNy44MSwyLjk1LjgxLDEuMzMsMCwyLjM2LS4yNywzLjA5LS44MS43My0uNTMsMS4yMi0xLjI4LDEuNDctMi4yMy4xNi0uNTkuMjMtMS44My4yMi0zLjcyLTEuMjYsMS40OS0yLjgzLDIuMjMtNC43MiwyLjIzLTIuMzQsMC00LjE2LS44NC01LjQ1LTIuNTMtMS4yOC0xLjctMS45Mi0zLjczLTEuOTItNi4wOSwwLTEuNjIuMjktMy4xMi44OC00LjUuNTktMS4zOCwxLjQ1LTIuNDQsMi41Ni0zLjE5LDEuMTItLjc1LDIuNDQtMS4xMiwzLjk1LTEuMTIsMi4wMSwwLDMuNjcuODEsNC45NywyLjQ0di0yLjA2aDIuNjd2MTQuNzVjMCwyLjY2LS4yNyw0LjU0LS44MSw1LjY0LS41NCwxLjExLTEuNCwxLjk5LTIuNTgsMi42Mi0xLjE3LjY1LTIuNi45Ny00LjMxLjk3LTIuMDQsMC0zLjY5LS40Ni00Ljk0LTEuMzgtMS4yNS0uOTItMS44NS0yLjMtMS44MS00LjE0Wk03NDkuMDksMTA1Ljk3YzAsMi4yNC40NCwzLjg4LDEuMzMsNC45MS45LDEuMDIsMi4wMSwxLjUzLDMuMzQsMS41M3MyLjQ1LS41MSwzLjM0LTEuNTNjLjktMS4wMiwxLjM0LTIuNjIsMS4zNC00Ljgxcy0uNDYtMy42Ny0xLjM5LTQuNzJjLS45My0xLjA2LTIuMDQtMS41OS0zLjM0LTEuNTlzLTIuMzguNTItMy4yOCwxLjU2Yy0uOSwxLjA0LTEuMzQsMi41OS0xLjM0LDQuNjZaIi8+CiAgICAgIDxwYXRoIGQ9Ik02MDYuNDYsMTUzLjh2LTE3LjA2aDIuNTh2Mi40MWMuNTQtLjg0LDEuMjYtMS41MiwyLjE0LTIuMDIuODktLjUxLDEuOS0uNzcsMy4wMy0uNzcsMS4yNiwwLDIuMy4yNywzLjExLjguODEuNTIsMS4zOSwxLjI1LDEuNzIsMi4xOSwxLjM0LTEuOTksMy4xLTIuOTgsNS4yNy0yLjk4LDEuNjksMCwyLjk4LjQ3LDMuODksMS40MS45Mi45NCwxLjM4LDIuMzgsMS4zOCw0LjMzdjExLjdoLTIuODh2LTEwLjc1YzAtMS4xNi0uMDktMS45OC0uMjgtMi40OC0uMTktLjUxLS41My0uOTItMS4wMy0xLjIzLS40OS0uMzEtMS4wNi0uNDctMS43Mi0uNDctMS4yMSwwLTIuMjEuNC0zLDEuMi0uNzkuNzktMS4xOSwyLjA3LTEuMTksMy44M3Y5LjkxaC0yLjg5di0xMS4wOGMwLTEuMjktLjIzLTIuMjYtLjctMi44OS0uNDctLjY1LTEuMjQtLjk3LTIuMzEtLjk3LS44MSwwLTEuNTcuMjEtMi4yNy42NC0uNjkuNDMtMS4xOSwxLjA2LTEuNSwxLjg5LS4zLjgyLS40NSwyLjAxLS40NSwzLjU2djguODRoLTIuODlaTTYzMi43OCwxNDUuMjdjMC0zLjE2Ljg4LTUuNDksMi42Mi03LjAyLDEuNDctMS4yNiwzLjI2LTEuODksNS4zOC0xLjg5LDIuMzQsMCw0LjI2Ljc3LDUuNzUsMi4zMSwxLjQ5LDEuNTMsMi4yMywzLjY1LDIuMjMsNi4zNiwwLDIuMi0uMzMsMy45My0xLDUuMTktLjY2LDEuMjUtMS42MSwyLjIyLTIuODgsMi45Mi0xLjI1LjctMi42MiwxLjA1LTQuMTEsMS4wNS0yLjM5LDAtNC4zMi0uNzctNS44LTIuMy0xLjQ3LTEuNTMtMi4yLTMuNzQtMi4yLTYuNjJaTTYzNS43NSwxNDUuMjdjMCwyLjE5LjQ3LDMuODMsMS40Miw0LjkyLjk2LDEuMDgsMi4xNiwxLjYyLDMuNjEsMS42MnMyLjYxLS41NSwzLjU2LTEuNjRjLjk2LTEuMDksMS40NC0yLjc2LDEuNDQtNSwwLTIuMS0uNDgtMy43LTEuNDQtNC43OC0uOTYtMS4wOS0yLjE1LTEuNjQtMy41Ni0xLjY0cy0yLjY1LjU0LTMuNjEsMS42MmMtLjk1LDEuMDgtMS40MiwyLjcxLTEuNDIsNC44OVpNNjYzLjIyLDE1My44di0yLjE2Yy0xLjA4LDEuNy0yLjY3LDIuNTUtNC43NywyLjU1LTEuMzYsMC0yLjYyLS4zOC0zLjc3LTEuMTItMS4xNC0uNzUtMi4wMi0xLjgtMi42NC0zLjE0cy0uOTQtMi44OS0uOTQtNC42NC4yOC0zLjI0Ljg0LTQuNjJjLjU3LTEuMzksMS40My0yLjQ1LDIuNTYtMy4xOSwxLjE0LS43NCwyLjQtMS4xMSwzLjgtMS4xMSwxLjAzLDAsMS45NS4yMiwyLjc1LjY2LjguNDMsMS40Ni45OSwxLjk3LDEuNjl2LTguNDVoMi44OHYyMy41NWgtMi42OVpNNjU0LjA3LDE0NS4yOWMwLDIuMTkuNDYsMy44MiwxLjM4LDQuOTEuOTMsMS4wOCwyLjAyLDEuNjIsMy4yNywxLjYyczIuMzMtLjUyLDMuMjItMS41NWMuODktMS4wNCwxLjMzLTIuNjIsMS4zMy00LjczLDAtMi4zMy0uNDUtNC4wNS0xLjM2LTUuMTQtLjktMS4wOS0yLTEuNjQtMy4zMS0xLjY0cy0yLjM1LjUzLTMuMjIsMS41OGMtLjg2LDEuMDQtMS4zLDIuNjktMS4zLDQuOTVaTTY4Mi4xMiwxNDguM2wyLjk4LjM4Yy0uNDcsMS43NS0xLjM0LDMuMTEtMi42Miw0LjA4LTEuMjcuOTYtMi45LDEuNDQtNC44OCwxLjQ0LTIuNDksMC00LjQ3LS43Ny01Ljk0LTIuMy0xLjQ2LTEuNTQtMi4xOS0zLjctMi4xOS02LjQ4cy43NC01LjA5LDIuMjItNi42NywzLjQtMi4zOCw1Ljc1LTIuMzgsNC4xNC43OCw1LjU4LDIuMzNjMS40NSwxLjU1LDIuMTcsMy43MywyLjE3LDYuNTUsMCwuMTgsMCwuNDQtLjAyLjc4aC0xMi43MmMuMTEsMS44Ni42NSwzLjMsMS41OSw0LjNzMi4xNCwxLjUsMy41NiwxLjVjMS4wNiwwLDEuOTctLjI4LDIuNzItLjgzLjc1LS41NiwxLjM0LTEuNDYsMS43OC0yLjY5Wk02NzIuNjMsMTQzLjYzaDkuNTJjLS4xMi0xLjQzLS40OS0yLjUtMS4wOS0zLjIyLS45Mi0xLjExLTIuMTEtMS42Ny0zLjU4LTEuNjctMS4zMywwLTIuNDUuNDUtMy4zNiwxLjM0LS45Ljg5LTEuMzksMi4wNy0xLjQ4LDMuNTVaTTY4OC42NywxNTMuOHYtMjMuNTVoMi44OXYyMy41NWgtMi44OVoiLz4KICAgICAgPHBhdGggY2xhc3M9InN0NyIgZD0iTTE1OC41Miw0MjguODdoMGMwLTIwLjI3LDE2LjQ0LTM2LjcxLDM2LjcxLTM2LjcxaDY3Ny4yMmM5Ljc0LDAsMTkuMDcsMy44NywyNS45NiwxMC43NSw2Ljg4LDYuODgsMTAuNzUsMTYuMjIsMTAuNzUsMjUuOTZ2MjM4LjYxYzAsMjAuMjctMTYuNDQsMzYuNzEtMzYuNzEsMzYuNzFIMTk1LjIzYy0yMC4yNywwLTM2LjcxLTE2LjQ0LTM2LjcxLTM2Ljcxdi0yMzguNjFaIi8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0xNTguNTIsNDI4Ljg3aDBjMC0yMC4yNywxNi40NC0zNi43MSwzNi43MS0zNi43MWg2NzcuMjJjOS43NCwwLDE5LjA3LDMuODcsMjUuOTYsMTAuNzUsNi44OCw2Ljg4LDEwLjc1LDE2LjIyLDEwLjc1LDI1Ljk2djIzOC42MWMwLDIwLjI3LTE2LjQ0LDM2LjcxLTM2LjcxLDM2LjcxSDE5NS4yM2MtMjAuMjcsMC0zNi43MS0xNi40NC0zNi43MS0zNi43MXYtMjM4LjYxWiIvPgogICAgICA8cGF0aCBkPSJNMzQ1LjczLDQ0Ni4yOGgtNS45MWwtMi4zNi02LjExaC0xMC43NWwtMi4yMiw2LjExaC01Ljc3bDEwLjQ4LTI2LjkxaDUuNzVsMTAuNzcsMjYuOTFaTTMzNS43Myw0MzUuNjRsLTMuNy05Ljk4LTMuNjQsOS45OGg3LjM0Wk0zNDguNDMsNDI2Ljc4aDQuODF2Mi44OGMuNjItLjk4LDEuNDctMS43OCwyLjUzLTIuMzksMS4wNi0uNjEsMi4yNC0uOTIsMy41NS0uOTIsMi4yNiwwLDQuMTguODksNS43NSwyLjY3LDEuNTgsMS43NywyLjM4LDQuMjQsMi4zOCw3LjQxcy0uOCw1Ljc5LTIuMzksNy41OWMtMS41OCwxLjgtMy41MSwyLjctNS43NywyLjctMS4wOCwwLTIuMDYtLjIxLTIuOTQtLjY0LS44OC0uNDMtMS44LTEuMTYtMi43Ny0yLjJ2OS44M2gtNS4xNnYtMjYuOTJaTTM1My41NCw0MzYuMmMwLDIuMTkuNDMsMy44MSwxLjMsNC44Ni44OCwxLjA0LDEuOTQsMS41NiwzLjE5LDEuNTZzMi4xOS0uNDgsMi45OC0xLjQ0Yy43OS0uOTYsMS4xOS0yLjU0LDEuMTktNC43MywwLTIuMDQtLjQxLTMuNTYtMS4yMy00LjU1LS44MS0uOTktMS44Mi0xLjQ4LTMuMDMtMS40OHMtMi4zMS40OS0zLjE0LDEuNDdjLS44My45Ny0xLjI1LDIuNDEtMS4yNSw0LjMxWk0zNzEuMzksNDI2Ljc4aDQuODF2Mi44OGMuNjItLjk4LDEuNDctMS43OCwyLjUzLTIuMzksMS4wNi0uNjEsMi4yNC0uOTIsMy41NS0uOTIsMi4yNiwwLDQuMTguODksNS43NSwyLjY3LDEuNTgsMS43NywyLjM4LDQuMjQsMi4zOCw3LjQxcy0uOCw1Ljc5LTIuMzksNy41OWMtMS41OCwxLjgtMy41MSwyLjctNS43NywyLjctMS4wOCwwLTIuMDYtLjIxLTIuOTQtLjY0LS44OC0uNDMtMS44LTEuMTYtMi43Ny0yLjJ2OS44M2gtNS4xNnYtMjYuOTJaTTM3Ni41LDQzNi4yYzAsMi4xOS40MywzLjgxLDEuMyw0Ljg2Ljg4LDEuMDQsMS45NCwxLjU2LDMuMTksMS41NnMyLjE5LS40OCwyLjk4LTEuNDRjLjc5LS45NiwxLjE5LTIuNTQsMS4xOS00LjczLDAtMi4wNC0uNDEtMy41Ni0xLjIzLTQuNTUtLjgxLS45OS0xLjgyLTEuNDgtMy4wMy0xLjQ4cy0yLjMxLjQ5LTMuMTQsMS40N2MtLjgzLjk3LTEuMjUsMi40MS0xLjI1LDQuMzFaTTM5NC41Nyw0NDYuMjh2LTI2LjkxaDE4LjQ1djQuNTVoLTEzLjAydjYuMzhoMTEuMjN2NC41NWgtMTEuMjN2MTEuNDRoLTUuNDRaTTQzMC4zLDQ0Ni4yOHYtMi45MmMtLjcxLDEuMDQtMS42NCwxLjg2LTIuOCwyLjQ3LTEuMTYuNTktMi4zOC44OS0zLjY3Ljg5cy0yLjQ3LS4yOS0zLjUyLS44NmMtMS4wNC0uNTctMS44LTEuMzgtMi4yNy0yLjQyLS40Ni0xLjA0LS42OS0yLjQ4LS42OS00LjMxdi0xMi4zNGg1LjE2djguOTdjMCwyLjc0LjA5LDQuNDIuMjgsNS4wMy4xOS42MS41MywxLjEsMS4wMywxLjQ3LjUxLjM2LDEuMTUuNTUsMS45Mi41NS44OCwwLDEuNjYtLjI0LDIuMzYtLjcyLjctLjQ5LDEuMTctMS4wOSwxLjQyLTEuOC4yNi0uNzIuMzktMi40Ny4zOS01LjI3di04LjIzaDUuMTd2MTkuNWgtNC44Wk00NTguMTcsNDQ2LjI4aC01LjE3di05Ljk1YzAtMi4xLS4xMS0zLjQ2LS4zMy00LjA4LS4yMi0uNjEtLjU4LTEuMDktMS4wOC0xLjQ0LS40OS0uMzQtMS4wOC0uNTItMS43OC0uNTItLjksMC0xLjcuMjQtMi40MS43My0uNzEuNDktMS4yLDEuMTQtMS40NywxLjk1LS4yNi44LS4zOSwyLjI5LS4zOSw0LjQ3djguODNoLTUuMTZ2LTE5LjVoNC44djIuODhjMS43LTIuMjEsMy44NC0zLjMxLDYuNDItMy4zMSwxLjE0LDAsMi4xNy4yMSwzLjExLjYyLjk1LjQxLDEuNjYuOTMsMi4xNCwxLjU2LjQ5LjY0LjgzLDEuMzYsMS4wMiwyLjE3LjIuOC4zLDEuOTYuMywzLjQ3djEyLjExWk00ODAuNCw0MzIuNTRsLTUuMDkuOTJjLS4xNy0xLjAyLS41Ni0xLjc5LTEuMTctMi4zLS42LS41MS0xLjM5LS43Ny0yLjM0LS43Ny0xLjI5LDAtMi4zMi40NC0zLjA5LDEuMzMtLjc2Ljg5LTEuMTQsMi4zNy0xLjE0LDQuNDUsMCwyLjMxLjM5LDMuOTUsMS4xNyw0LjkxLjc4Ljk1LDEuODIsMS40MiwzLjEyLDEuNDIuOTgsMCwxLjc4LS4yOCwyLjQxLS44My42Mi0uNTYsMS4wNy0xLjUyLDEuMzMtMi44OGw1LjA2Ljg2Yy0uNTMsMi4zMi0xLjU0LDQuMDgtMy4wMyw1LjI3LTEuNDksMS4xOS0zLjQ5LDEuNzgtNiwxLjc4LTIuODUsMC01LjEzLS45LTYuODMtMi42OS0xLjY5LTEuOC0yLjUzLTQuMy0yLjUzLTcuNDhzLjg1LTUuNzIsMi41NS03LjUyYzEuNy0xLjc5LDQtMi42OSw2LjkxLTIuNjksMi4zOCwwLDQuMjYuNTEsNS42NiwxLjUzLDEuNDEsMS4wMiwyLjQyLDIuNTgsMy4wMyw0LjY3Wk00OTMuMjUsNDI2Ljc4djQuMTJoLTMuNTN2Ny44NGMwLDEuNTkuMDMsMi41My4wOSwyLjguMDcuMjYuMjMuNDcuNDcuNjQuMjQuMTcuNTMuMjUuODguMjUuNDgsMCwxLjE3LS4xNiwyLjA4LS40OGwuNDQsNGMtMS4yLjUxLTIuNTYuNzctNC4wOC43Ny0uOTMsMC0xLjc3LS4xNi0yLjUyLS40N3MtMS4zLS43MS0xLjY2LTEuMmMtLjM0LS41LS41OC0xLjE3LS43LTIuMDItLjExLS42LS4xNy0xLjgyLS4xNy0zLjY0di04LjQ4aC0yLjM4di00LjEyaDIuMzh2LTMuODhsNS4xNy0zdjYuODhoMy41M1pNNDk2LjgzLDQyNC4xNHYtNC43N2g1LjE2djQuNzdoLTUuMTZaTTQ5Ni44Myw0NDYuMjh2LTE5LjVoNS4xNnYxOS41aC01LjE2Wk01MDYuMDcsNDM2LjI2YzAtMS43Mi40Mi0zLjM4LDEuMjctNC45OC44NC0xLjYsMi4wNC0yLjgzLDMuNTktMy42NywxLjU1LS44NCwzLjI4LTEuMjcsNS4xOS0xLjI3LDIuOTUsMCw1LjM2Ljk2LDcuMjUsMi44OCwxLjg5LDEuOTIsMi44Myw0LjM0LDIuODMsNy4yN3MtLjk1LDUuMzktMi44Niw3LjMzYy0xLjksMS45NC00LjI5LDIuOTEtNy4xOSwyLjkxLTEuNzgsMC0zLjQ4LS40LTUuMTEtMS4yLTEuNjItLjgxLTIuODYtMS45OS0zLjctMy41NS0uODQtMS41Ni0xLjI3LTMuNDYtMS4yNy01LjdaTTUxMS4zNyw0MzYuNTNjMCwxLjk0LjQ2LDMuNDIsMS4zOCw0LjQ1LjkyLDEuMDIsMi4wNSwxLjUzLDMuMzksMS41M3MyLjQ3LS41MSwzLjM4LTEuNTNjLjkyLTEuMDMsMS4zOC0yLjUzLDEuMzgtNC40OHMtLjQ2LTMuMzgtMS4zOC00LjQxYy0uOTEtMS4wMy0yLjAzLTEuNTUtMy4zOC0xLjU1cy0yLjQ3LjUyLTMuMzksMS41NWMtLjkyLDEuMDMtMS4zOCwyLjUxLTEuMzgsNC40NFpNNTQ3Ljk3LDQ0Ni4yOGgtNS4xN3YtOS45NWMwLTIuMS0uMTEtMy40Ni0uMzMtNC4wOC0uMjItLjYxLS41OC0xLjA5LTEuMDgtMS40NC0uNDktLjM0LTEuMDgtLjUyLTEuNzgtLjUyLS45LDAtMS43LjI0LTIuNDEuNzMtLjcxLjQ5LTEuMiwxLjE0LTEuNDcsMS45NS0uMjYuOC0uMzksMi4yOS0uMzksNC40N3Y4LjgzaC01LjE2di0xOS41aDQuOHYyLjg4YzEuNy0yLjIxLDMuODQtMy4zMSw2LjQyLTMuMzEsMS4xNCwwLDIuMTcuMjEsMy4xMS42Mi45NS40MSwxLjY2LjkzLDIuMTQsMS41Ni40OS42NC44MywxLjM2LDEuMDIsMi4xNy4yLjguMywxLjk2LjMsMy40N3YxMi4xMVpNNTUzLjE1LDQ0Ni4yOHYtMjYuOTFoOC4xNGw0Ljg4LDE4LjM2LDQuODMtMTguMzZoOC4xNnYyNi45MWgtNS4wNXYtMjEuMTlsLTUuMzQsMjEuMTloLTUuMjNsLTUuMzMtMjEuMTl2MjEuMTloLTUuMDVaTTU4OC4zNiw0MzIuNzNsLTQuNjctLjg0Yy41Mi0xLjg5LDEuNDItMy4yOCwyLjctNC4xOSwxLjI5LS45MSwzLjItMS4zNiw1LjczLTEuMzYsMi4zLDAsNC4wMi4yOCw1LjE0LjgzLDEuMTIuNTQsMS45MiwxLjIzLDIuMzgsMi4wOC40Ni44My42OSwyLjM3LjY5LDQuNjFsLS4wNSw2LjAyYzAsMS43MS4wOCwyLjk3LjI1LDMuOC4xNy44MS40NywxLjY4LjkyLDIuNjFoLTUuMTFjLS4xMi0uMzQtLjI5LS44NS0uNDgtMS41My0uMDgtLjMtLjE1LS41LS4xOS0uNTktLjg5Ljg1LTEuODMsMS40OS0yLjgzLDEuOTItMSwuNDMtMi4wNy42NC0zLjIyLjY0LTIsMC0zLjU4LS41NC00LjczLTEuNjItMS4xNi0xLjA5LTEuNzMtMi40Ny0xLjczLTQuMTQsMC0xLjA5LjI2LTIuMDcuNzgtMi45NC41My0uODYsMS4yNy0xLjUzLDIuMjItMS45OC45NS0uNDYsMi4zMS0uODYsNC4wOS0xLjIsMi40Mi0uNDYsNC4wOS0uODgsNS4wMi0xLjI3di0uNTJjMC0uOTktLjI0LTEuNjktLjczLTIuMTEtLjQ5LS40My0xLjQxLS42NC0yLjc3LS42NC0uOTIsMC0xLjY0LjE4LTIuMTYuNTUtLjUxLjM1LS45My45OC0xLjI1LDEuODlaTTU5NS4yNyw0MzYuOTJjLS42Ni4yMi0xLjcuNDgtMy4xNC44LTEuNDMuMy0yLjM2LjYtMi44MS44OS0uNjcuNDgtMSwxLjA4LTEsMS44MXMuMjcsMS4zNi44LDEuODljLjU0LjUyLDEuMjMuNzgsMi4wNi43OC45MywwLDEuODEtLjMxLDIuNjYtLjkyLjYyLS40NywxLjA0LTEuMDQsMS4yMy0xLjcuMTQtLjQ1LjItMS4yOS4yLTIuNTJ2LTEuMDNaTTYyMy4xNiw0NDYuMjhoLTUuMTd2LTkuOTVjMC0yLjEtLjExLTMuNDYtLjMzLTQuMDgtLjIyLS42MS0uNTgtMS4wOS0xLjA4LTEuNDQtLjQ5LS4zNC0xLjA4LS41Mi0xLjc4LS41Mi0uOSwwLTEuNy4yNC0yLjQxLjczLS43MS40OS0xLjIsMS4xNC0xLjQ3LDEuOTUtLjI2LjgtLjM5LDIuMjktLjM5LDQuNDd2OC44M2gtNS4xNnYtMTkuNWg0Ljh2Mi44OGMxLjctMi4yMSwzLjg0LTMuMzEsNi40Mi0zLjMxLDEuMTQsMCwyLjE3LjIxLDMuMTEuNjIuOTUuNDEsMS42Ni45MywyLjE0LDEuNTYuNDkuNjQuODMsMS4zNiwxLjAyLDIuMTcuMi44LjMsMS45Ni4zLDMuNDd2MTIuMTFaTTYzMi4yMyw0MzIuNzNsLTQuNjctLjg0Yy41Mi0xLjg5LDEuNDItMy4yOCwyLjctNC4xOSwxLjI5LS45MSwzLjItMS4zNiw1LjczLTEuMzYsMi4zLDAsNC4wMi4yOCw1LjE0LjgzLDEuMTIuNTQsMS45MiwxLjIzLDIuMzgsMi4wOC40Ni44My42OSwyLjM3LjY5LDQuNjFsLS4wNSw2LjAyYzAsMS43MS4wOCwyLjk3LjI1LDMuOC4xNy44MS40NywxLjY4LjkyLDIuNjFoLTUuMTFjLS4xMi0uMzQtLjI5LS44NS0uNDgtMS41My0uMDgtLjMtLjE1LS41LS4xOS0uNTktLjg5Ljg1LTEuODMsMS40OS0yLjgzLDEuOTItMSwuNDMtMi4wNy42NC0zLjIyLjY0LTIsMC0zLjU4LS41NC00LjczLTEuNjItMS4xNi0xLjA5LTEuNzMtMi40Ny0xLjczLTQuMTQsMC0xLjA5LjI2LTIuMDcuNzgtMi45NC41My0uODYsMS4yNy0xLjUzLDIuMjItMS45OC45NS0uNDYsMi4zMS0uODYsNC4wOS0xLjIsMi40Mi0uNDYsNC4wOS0uODgsNS4wMi0xLjI3di0uNTJjMC0uOTktLjI0LTEuNjktLjczLTIuMTEtLjQ5LS40My0xLjQxLS42NC0yLjc3LS42NC0uOTIsMC0xLjY0LjE4LTIuMTYuNTUtLjUxLjM1LS45My45OC0xLjI1LDEuODlaTTYzOS4xNCw0MzYuOTJjLS42Ni4yMi0xLjcuNDgtMy4xNC44LTEuNDMuMy0yLjM2LjYtMi44MS44OS0uNjcuNDgtMSwxLjA4LTEsMS44MXMuMjcsMS4zNi44LDEuODljLjU0LjUyLDEuMjMuNzgsMi4wNi43OC45MywwLDEuODEtLjMxLDIuNjYtLjkyLjYyLS40NywxLjA0LTEuMDQsMS4yMy0xLjcuMTQtLjQ1LjItMS4yOS4yLTIuNTJ2LTEuMDNaTTY0OC44MSw0NDcuNTZsNS44OS43MmMuMS42OS4zMywxLjE2LjY5LDEuNDIuNDkuMzYsMS4yNi41NSwyLjMxLjU1LDEuMzQsMCwyLjM1LS4yLDMuMDMtLjYxLjQ1LS4yNy43OS0uNywxLjAyLTEuMy4xNy0uNDQuMjUtMS4yMy4yNS0yLjM4di0yLjg0Yy0xLjU0LDIuMS0zLjQ5LDMuMTYtNS44NCwzLjE2LTIuNjEsMC00LjY5LTEuMTEtNi4yMi0zLjMzLTEuMi0xLjc1LTEuOC0zLjkzLTEuOC02LjUzLDAtMy4yNy43OS01Ljc3LDIuMzYtNy40OCwxLjU3LTEuNzMsMy41My0yLjU5LDUuODYtMi41OXM0LjQsMS4wNiw1Ljk3LDMuMTd2LTIuNzNoNC44M3YxNy41YzAsMi4zLS4xOSw0LjAyLS41OCw1LjE2LS4zOCwxLjE0LS45MSwyLjAzLTEuNTksMi42Ny0uNjkuNjYtMS42LDEuMTctMi43NSwxLjUzLTEuMTQuMzYtMi41OC41NS00LjMzLjU1LTMuMzEsMC01LjY2LS41Ny03LjA1LTEuNy0xLjM4LTEuMTItMi4wNi0yLjU2LTIuMDYtNC4zLDAtLjE3LDAtLjM4LjAyLS42MlpNNjUzLjQyLDQzNi4xMmMwLDIuMDcuNCwzLjU5LDEuMiw0LjU1LjguOTYsMS43OSwxLjQ0LDIuOTcsMS40NCwxLjI2LDAsMi4zMi0uNDksMy4xOS0xLjQ3Ljg4LS45OSwxLjMxLTIuNDUsMS4zMS00LjM4cy0uNDItMy41Mi0xLjI1LTQuNWMtLjgzLS45OC0xLjg5LTEuNDctMy4xNi0xLjQ3cy0yLjI2LjQ4LTMuMDYsMS40NGMtLjguOTYtMS4yLDIuNDItMS4yLDQuMzlaTTY4My41NCw0NDAuMDdsNS4xNC44NmMtLjY2LDEuODktMS43LDMuMzItMy4xMiw0LjMxLTEuNDMuOTgtMy4yMSwxLjQ3LTUuMzYsMS40Ny0zLjM5LDAtNS44OS0xLjEtNy41Mi0zLjMxLTEuMjktMS43OC0xLjk0LTQuMDItMS45NC02LjcyLDAtMy4yNC44NC01Ljc3LDIuNTMtNy41OSwxLjctMS44MywzLjgzLTIuNzUsNi40MS0yLjc1LDIuOTEsMCw1LjIuOTYsNi44OCwyLjg4LDEuNjgsMS45MiwyLjQ4LDQuODUsMi40MSw4LjhoLTEyLjkyYy4wMywxLjUzLjQ0LDIuNzIsMS4yMywzLjU4LjguODQsMS44LDEuMjcsMi45OCwxLjI3LjgsMCwxLjQ4LS4yMiwyLjAzLS42Ni41NS0uNDQuOTctMS4xNSwxLjI1LTIuMTJaTTY4My44NCw0MzQuODZjLS4wNC0xLjQ5LS40My0yLjYyLTEuMTctMy4zOS0uNzMtLjc4LTEuNjItMS4xNy0yLjY3LTEuMTctMS4xMiwwLTIuMDUuNDEtMi43OCwxLjIyLS43NC44Mi0xLjEsMS45NC0xLjA4LDMuMzRoNy43Wk02OTguMTEsNDQ2LjI4aC01LjE2di0xOS41aDQuNzh2Mi43OGMuODItMS4zMSwxLjU2LTIuMTgsMi4yMi0yLjU5LjY2LS40MiwxLjQtLjYyLDIuMjMtLjYyLDEuMTcsMCwyLjMuMzIsMy4zOS45N2wtMS41OSw0LjVjLS44OC0uNTYtMS42OC0uODQtMi40Mi0uODRzLTEuMzQuMi0xLjg0LjYxYy0uNS40LS45LDEuMTEtMS4xOSwyLjE2LS4yOCwxLjAzLS40MiwzLjIxLS40Miw2LjUzdjYuMDJaTTcxOC4yNCw0MjQuMTR2LTQuNzdoNS4xNnY0Ljc3aC01LjE2Wk03MTguMjQsNDQ2LjI4di0xOS41aDUuMTZ2MTkuNWgtNS4xNlpNNzQ2LjQyLDQ0Ni4yOGgtNS4xN3YtOS45NWMwLTIuMS0uMTEtMy40Ni0uMzMtNC4wOC0uMjItLjYxLS41OC0xLjA5LTEuMDgtMS40NC0uNDktLjM0LTEuMDgtLjUyLTEuNzgtLjUyLS45LDAtMS43LjI0LTIuNDEuNzMtLjcxLjQ5LTEuMiwxLjE0LTEuNDcsMS45NS0uMjYuOC0uMzksMi4yOS0uMzksNC40N3Y4LjgzaC01LjE2di0xOS41aDQuOHYyLjg4YzEuNy0yLjIxLDMuODQtMy4zMSw2LjQyLTMuMzEsMS4xNCwwLDIuMTcuMjEsMy4xMS42Mi45NS40MSwxLjY2LjkzLDIuMTQsMS41Ni40OS42NC44MywxLjM2LDEuMDIsMi4xNy4yLjguMywxLjk2LjMsMy40N3YxMi4xMVoiLz4KICAgICAgPHBhdGggZD0iTTQwNy4zMyw0OTEuMjhoLTUuOTFsLTIuMzYtNi4xMWgtMTAuNzVsLTIuMjIsNi4xMWgtNS43N2wxMC40OC0yNi45MWg1Ljc1bDEwLjc3LDI2LjkxWk0zOTcuMzMsNDgwLjY0bC0zLjctOS45OC0zLjY0LDkuOThoNy4zNFpNNDI3LjkyLDQ5MS4yOGgtNS4xN3YtOS45NWMwLTIuMS0uMTEtMy40Ni0uMzMtNC4wOC0uMjItLjYxLS41OC0xLjA5LTEuMDgtMS40NC0uNDktLjM0LTEuMDgtLjUyLTEuNzgtLjUyLS45LDAtMS43LjI0LTIuNDEuNzMtLjcxLjQ5LTEuMiwxLjE0LTEuNDcsMS45NS0uMjYuOC0uMzksMi4yOS0uMzksNC40N3Y4LjgzaC01LjE2di0xOS41aDQuOHYyLjg4YzEuNy0yLjIxLDMuODQtMy4zMSw2LjQyLTMuMzEsMS4xNCwwLDIuMTcuMjEsMy4xMS42Mi45NS40MSwxLjY2LjkzLDIuMTQsMS41Ni40OS42NC44MywxLjM2LDEuMDIsMi4xNy4yLjguMywxLjk2LjMsMy40N3YxMi4xMVpNNDUxLjAzLDQ5MS4yOGgtNC44di0yLjg2Yy0uNzksMS4xMS0xLjczLDEuOTQtMi44MSwyLjQ4LTEuMDguNTQtMi4xOC44MS0zLjI4LjgxLTIuMjQsMC00LjE2LS45LTUuNzUtMi43LTEuNTktMS44LTIuMzktNC4zMi0yLjM5LTcuNTYsMC0zLjMuNzgtNS44MSwyLjMzLTcuNTMsMS41NS0xLjcyLDMuNTItMi41OCw1Ljg5LTIuNTgsMi4xOCwwLDQuMDYuOTEsNS42NiwyLjcydi05LjY5aDUuMTZ2MjYuOTFaTTQzNy4yNiw0ODEuMTFjMCwyLjA4LjI5LDMuNTkuODYsNC41Mi44MywxLjM0LDEuOTksMi4wMiwzLjQ4LDIuMDIsMS4xOSwwLDIuMi0uNSwzLjAzLTEuNS44My0xLjAxLDEuMjUtMi41MiwxLjI1LTQuNTMsMC0yLjI0LS40MS0zLjg1LTEuMjItNC44My0uOC0uOTktMS44My0xLjQ4LTMuMDktMS40OHMtMi4yNi40OS0zLjA4LDEuNDdjLS44Mi45Ny0xLjIzLDIuNDItMS4yMyw0LjM0Wk00NjEuMDUsNDkxLjI4aC01LjE2di0xOS41aDQuNzh2Mi43OGMuODItMS4zMSwxLjU2LTIuMTgsMi4yMi0yLjU5LjY2LS40MiwxLjQtLjYyLDIuMjMtLjYyLDEuMTcsMCwyLjMuMzIsMy4zOS45N2wtMS41OSw0LjVjLS44OC0uNTYtMS42OC0uODQtMi40Mi0uODRzLTEuMzQuMi0xLjg0LjYxYy0uNS40LS45LDEuMTEtMS4xOSwyLjE2LS4yOCwxLjAzLS40MiwzLjIxLS40Miw2LjUzdjYuMDJaTTQ2OS41NCw0ODEuMjZjMC0xLjcyLjQyLTMuMzgsMS4yNy00Ljk4Ljg0LTEuNiwyLjA0LTIuODMsMy41OS0zLjY3LDEuNTUtLjg0LDMuMjgtMS4yNyw1LjE5LTEuMjcsMi45NSwwLDUuMzYuOTYsNy4yNSwyLjg4LDEuODksMS45MiwyLjgzLDQuMzQsMi44Myw3LjI3LDAsMi45NS0uOTUsNS4zOS0yLjg2LDcuMzMtMS45LDEuOTQtNC4yOSwyLjkxLTcuMTksMi45MS0xLjc4LDAtMy40OC0uNC01LjExLTEuMi0xLjYyLS44MS0yLjg2LTEuOTktMy43LTMuNTUtLjg0LTEuNTYtMS4yNy0zLjQ2LTEuMjctNS43Wk00NzQuODQsNDgxLjUzYzAsMS45NC40NiwzLjQyLDEuMzgsNC40NS45MiwxLjAyLDIuMDUsMS41MywzLjM5LDEuNTNzMi40Ny0uNTEsMy4zOC0xLjUzYy45Mi0xLjAzLDEuMzgtMi41MywxLjM4LTQuNDgsMC0xLjkxLS40Ni0zLjM4LTEuMzgtNC40MS0uOTEtMS4wMy0yLjAzLTEuNTUtMy4zOC0xLjU1cy0yLjQ3LjUyLTMuMzksMS41NWMtLjkyLDEuMDMtMS4zNywyLjUxLTEuMzgsNC40NFpNNDkzLjcxLDQ2OS4xNHYtNC43N2g1LjE2djQuNzdoLTUuMTZaTTQ5My43MSw0OTEuMjh2LTE5LjVoNS4xNnYxOS41aC01LjE2Wk01MjIuMDMsNDkxLjI4aC00Ljh2LTIuODZjLS43OSwxLjExLTEuNzMsMS45NC0yLjgxLDIuNDgtMS4wOC41NC0yLjE4LjgxLTMuMjguODEtMi4yNCwwLTQuMTYtLjktNS43NS0yLjctMS41OS0xLjgtMi4zOS00LjMyLTIuMzktNy41NnMuNzgtNS44MSwyLjMzLTcuNTMsMy41Mi0yLjU4LDUuODktMi41OGMyLjE4LDAsNC4wNi45MSw1LjY2LDIuNzJ2LTkuNjloNS4xNnYyNi45MVpNNTA4LjI2LDQ4MS4xMWMwLDIuMDguMjksMy41OS44Niw0LjUyLjgzLDEuMzQsMS45OSwyLjAyLDMuNDgsMi4wMiwxLjE5LDAsMi4yLS41LDMuMDMtMS41LjgzLTEuMDEsMS4yNS0yLjUyLDEuMjUtNC41MywwLTIuMjQtLjQxLTMuODUtMS4yMi00LjgzLS44LS45OS0xLjgzLTEuNDgtMy4wOS0xLjQ4cy0yLjI2LjQ5LTMuMDgsMS40N2MtLjgyLjk3LTEuMjMsMi40Mi0xLjIzLDQuMzRaTTUzNy41OSw0OTEuMjh2LTI2LjkxaDguNzJjMy4zLDAsNS40Ni4xNCw2LjQ3LjQxLDEuNTQuNCwyLjgzLDEuMjcsMy44NiwyLjYyLDEuMDQsMS4zNSwxLjU2LDMuMSwxLjU2LDUuMjUsMCwxLjY1LS4zLDMuMDMtLjkxLDQuMTYtLjU5LDEuMTItMS4zNSwyLjAxLTIuMjgsMi42Ni0uOTIuNjUtMS44NSwxLjA3LTIuODEsMS4yOC0xLjI5LjI1LTMuMTcuMzgtNS42Mi4zOGgtMy41NXYxMC4xNmgtNS40NFpNNTQzLjAzLDQ2OC45MnY3LjY0aDIuOTdjMi4xNSwwLDMuNTgtLjE0LDQuMy0uNDJzMS4yOC0uNzIsMS42OS0xLjMxYy40Mi0uNi42Mi0xLjMxLjYyLTIuMTEsMC0uOTgtLjI5LTEuNzktLjg2LTIuNDItLjU3LS42NC0xLjMtMS4wMy0yLjE5LTEuMTktLjY1LS4xMi0xLjk1LS4xOS0zLjkxLS4xOWgtMi42MlpNNTYyLjY0LDQ5MS4yOHYtMjYuOTFoNS4xNnYyNi45MWgtNS4xNlpNNTc2LjkyLDQ3Ny43M2wtNC42Ny0uODRjLjUyLTEuODksMS40Mi0zLjI4LDIuNy00LjE5LDEuMjktLjkxLDMuMi0xLjM2LDUuNzMtMS4zNiwyLjMsMCw0LjAyLjI4LDUuMTQuODMsMS4xMi41NCwxLjkyLDEuMjMsMi4zOCwyLjA4LjQ2LjgzLjY5LDIuMzcuNjksNC42MWwtLjA1LDYuMDJjMCwxLjcxLjA4LDIuOTcuMjUsMy44LjE3LjgxLjQ3LDEuNjguOTIsMi42MWgtNS4xMWMtLjEyLS4zNC0uMjktLjg1LS40OC0xLjUzLS4wOC0uMy0uMTUtLjUtLjE5LS41OS0uODkuODUtMS44MywxLjQ5LTIuODMsMS45Mi0xLC40My0yLjA3LjY0LTMuMjIuNjQtMiwwLTMuNTgtLjU0LTQuNzMtMS42Mi0xLjE2LTEuMDktMS43My0yLjQ3LTEuNzMtNC4xNCwwLTEuMDkuMjYtMi4wNy43OC0yLjk0LjUzLS44NiwxLjI3LTEuNTMsMi4yMi0xLjk4Ljk1LS40NiwyLjMxLS44Niw0LjA5LTEuMiwyLjQyLS40Niw0LjA5LS44OCw1LjAyLTEuMjd2LS41MmMwLS45OS0uMjQtMS42OS0uNzMtMi4xMS0uNDktLjQzLTEuNDEtLjY0LTIuNzctLjY0LS45MiwwLTEuNjQuMTgtMi4xNi41NS0uNTEuMzUtLjkzLjk4LTEuMjUsMS44OVpNNTgzLjgzLDQ4MS45MmMtLjY2LjIyLTEuNy40OC0zLjE0LjgtMS40My4zLTIuMzYuNi0yLjgxLjg5LS42Ny40OC0xLDEuMDgtMSwxLjgxcy4yNywxLjM2LjgsMS44OWMuNTQuNTIsMS4yMy43OCwyLjA2Ljc4LjkzLDAsMS44MS0uMzEsMi42Ni0uOTIuNjItLjQ3LDEuMDQtMS4wNCwxLjIzLTEuNy4xNC0uNDUuMi0xLjI5LjItMi41MnYtMS4wM1pNNjAyLjkzLDQ3MS43OHY0LjEyaC0zLjUzdjcuODRjMCwxLjU5LjAzLDIuNTMuMDksMi44LjA3LjI2LjIzLjQ3LjQ3LjY0LjI0LjE3LjUzLjI1Ljg4LjI1LjQ4LDAsMS4xNy0uMTYsMi4wOC0uNDhsLjQ0LDRjLTEuMi41MS0yLjU2Ljc3LTQuMDguNzctLjkzLDAtMS43Ny0uMTYtMi41Mi0uNDdzLTEuMy0uNzEtMS42Ni0xLjJjLS4zNC0uNS0uNTgtMS4xNy0uNy0yLjAyLS4xMS0uNi0uMTctMS44Mi0uMTctMy42NHYtOC40OGgtMi4zOHYtNC4xMmgyLjM4di0zLjg4bDUuMTctM3Y2Ljg4aDMuNTNaTTYwNC4yNCw0NzEuNzhoMi44NnYtMS40N2MwLTEuNjQuMTctMi44NS41Mi0zLjY2LjM1LS44MSwxLTEuNDcsMS45NC0xLjk4Ljk0LS41MSwyLjEyLS43NywzLjU2LS43N3MyLjkxLjIyLDQuMzEuNjdsLS43LDMuNTljLS44Mi0uMi0xLjYxLS4zLTIuMzYtLjNzLTEuMjkuMTgtMS42MS41M2MtLjMyLjM0LS40OCwxLjAxLS40OCwydjEuMzhoMy44NHY0LjA2aC0zLjg0djE1LjQ0aC01LjE3di0xNS40NGgtMi44NnYtNC4wNlpNNjE3LjgyLDQ4MS4yNmMwLTEuNzIuNDItMy4zOCwxLjI3LTQuOTguODQtMS42LDIuMDQtMi44MywzLjU5LTMuNjcsMS41NS0uODQsMy4yOC0xLjI3LDUuMTktMS4yNywyLjk1LDAsNS4zNi45Niw3LjI1LDIuODgsMS44OSwxLjkyLDIuODMsNC4zNCwyLjgzLDcuMjdzLS45NSw1LjM5LTIuODYsNy4zM2MtMS45LDEuOTQtNC4yOSwyLjkxLTcuMTksMi45MS0xLjc4LDAtMy40OC0uNC01LjExLTEuMi0xLjYyLS44MS0yLjg2LTEuOTktMy43LTMuNTUtLjg0LTEuNTYtMS4yNy0zLjQ2LTEuMjctNS43Wk02MjMuMTIsNDgxLjUzYzAsMS45NC40NiwzLjQyLDEuMzgsNC40NS45MiwxLjAyLDIuMDUsMS41MywzLjM5LDEuNTNzMi40Ny0uNTEsMy4zOC0xLjUzYy45Mi0xLjAzLDEuMzgtMi41MywxLjM4LTQuNDhzLS40Ni0zLjM4LTEuMzgtNC40MWMtLjkxLTEuMDMtMi4wMy0xLjU1LTMuMzgtMS41NXMtMi40Ny41Mi0zLjM5LDEuNTVjLS45MiwxLjAzLTEuMzgsMi41MS0xLjM4LDQuNDRaTTY0Ni45Myw0OTEuMjhoLTUuMTZ2LTE5LjVoNC43OHYyLjc4Yy44Mi0xLjMxLDEuNTYtMi4xOCwyLjIyLTIuNTkuNjYtLjQyLDEuNC0uNjIsMi4yMy0uNjIsMS4xNywwLDIuMy4zMiwzLjM5Ljk3bC0xLjU5LDQuNWMtLjg4LS41Ni0xLjY4LS44NC0yLjQyLS44NHMtMS4zNC4yLTEuODQuNjFjLS41LjQtLjksMS4xMS0xLjE5LDIuMTYtLjI4LDEuMDMtLjQyLDMuMjEtLjQyLDYuNTN2Ni4wMlpNNjU2LjIzLDQ3MS43OGg0Ljc1djIuNjdjMS43MS0yLjA3LDMuNzMtMy4xMSw2LjA4LTMuMTEsMS4yNSwwLDIuMzMuMjYsMy4yNS43OC45Mi41MSwxLjY3LDEuMjksMi4yNywyLjMzLjg1LTEuMDQsMS43OC0xLjgyLDIuNzctMi4zMy45OS0uNTIsMi4wNS0uNzgsMy4xNy0uNzgsMS40NCwwLDIuNjUuMjksMy42NC44OC45OS41OCwxLjczLDEuNDQsMi4yMiwyLjU2LjM1LjgzLjUzLDIuMTguNTMsNC4wM3YxMi40N2gtNS4xNnYtMTEuMTRjMC0xLjk0LS4xOC0zLjE5LS41My0zLjc1LS40OC0uNzMtMS4yMS0xLjA5LTIuMi0xLjA5LS43MiwwLTEuNC4yMi0yLjA1LjY2LS42NC40NC0xLjA5LDEuMDgtMS4zOCwxLjk0LS4yOC44NS0uNDIsMi4yLS40Miw0LjAzdjkuMzZoLTUuMTZ2LTEwLjY5YzAtMS45LS4wOS0zLjEyLS4yOC0zLjY3LS4xOC0uNTUtLjQ2LS45Ni0uODQtMS4yMi0uMzktLjI3LS45MS0uNDEtMS41Ni0uNDEtLjgsMC0xLjUyLjIxLTIuMTYuNjQtLjY0LjQzLTEuMDksMS4wNS0xLjM4LDEuODYtLjI3LjgtLjQxLDIuMTQtLjQxLDQuMDJ2OS40N2gtNS4xNnYtMTkuNVoiLz4KICAgICAgPHBhdGggY2xhc3M9InN0NSIgZD0iTTI2OC42NCw1MjMuNzhoMjUxLjQzdjYyLjM5aC0yNTEuNDN2LTYyLjM5WiIvPgogICAgICA8cGF0aCBjbGFzcz0ic3QxIiBkPSJNMjY4LjY0LDUyMy43OGgyNTEuNDN2NjIuMzloLTI1MS40M3YtNjIuMzlaIi8+CiAgICAgIDxwYXRoIGQ9Ik0zMjAuMjcsNTY3LjA2di0yMy41NWgxNS44OHYyLjc4aC0xMi43N3Y3LjNoMTEuMDV2Mi43N2gtMTEuMDV2MTAuN2gtMy4xMVpNMzUxLDU2Ny4wNnYtMi41Yy0xLjMyLDEuOTMtMy4xMiwyLjg5LTUuNDEsMi44OS0xLjAxLDAtMS45NS0uMTktMi44My0uNTgtLjg2LS4zOS0xLjUxLS44Ny0xLjk0LTEuNDUtLjQzLS41OC0uNzItMS4zLS44OS0yLjE2LS4xMS0uNTYtLjE3LTEuNDYtLjE3LTIuNjl2LTEwLjU4aDIuODl2OS40N2MwLDEuNTEuMDYsMi41My4xNywzLjA1LjE4Ljc2LjU2LDEuMzYsMS4xNCwxLjguNTkuNDMsMS4zMy42NCwyLjIuNjRzMS42OC0uMjIsMi40NC0uNjZjLjc2LS40NSwxLjMtMS4wNSwxLjYxLTEuODEuMzItLjc3LjQ4LTEuODkuNDgtMy4zNHYtOS4xNGgyLjg5djE3LjA2aC0yLjU5Wk0zNTguMTIsNTY3LjA2di0xNy4wNmgyLjU5djIuNDRjMS4yNi0xLjg4LDMuMDctMi44MSw1LjQ0LTIuODEsMS4wMiwwLDEuOTYuMTksMi44My41Ni44Ni4zNiwxLjUxLjg1LDEuOTQsMS40NS40My41OS43MiwxLjMuODksMi4xMi4xMS41My4xNywxLjQ3LjE3LDIuODF2MTAuNDhoLTIuODl2LTEwLjM4YzAtMS4xOC0uMTEtMi4wNi0uMzQtMi42NC0uMjItLjU4LS42MS0xLjA1LTEuMTktMS4zOS0uNTctLjM1LTEuMjQtLjUzLTIuMDItLjUzLTEuMjQsMC0yLjMxLjM5LTMuMiwxLjE3LS44OS43OC0xLjMzLDIuMjctMS4zMyw0LjQ1djkuMzFoLTIuODlaTTM4Ny41NCw1NjAuODFsMi44NC4zOGMtLjMxLDEuOTYtMS4xMSwzLjQ5LTIuMzksNC42MS0xLjI3LDEuMS0yLjg0LDEuNjYtNC43LDEuNjYtMi4zMywwLTQuMjEtLjc2LTUuNjQtMi4yOC0xLjQyLTEuNTMtMi4xMi0zLjcyLTIuMTItNi41OCwwLTEuODMuMy0zLjQ0LjkxLTQuODMuNjEtMS4zOSwxLjU1LTIuNDIsMi44LTMuMTFzMi42MS0xLjAzLDQuMDgtMS4wM2MxLjg1LDAsMy4zNy40Nyw0LjU1LDEuNDEsMS4xOC45NCwxLjkzLDIuMjcsMi4yNSwzLjk4bC0yLjguNDRjLS4yNy0xLjE1LS43NS0yLjAxLTEuNDQtMi41OC0uNjgtLjU4LTEuNDktLjg4LTIuNDUtLjg4LTEuNDYsMC0yLjY1LjUyLTMuNTYsMS41Ni0uOTEsMS4wNC0xLjM2LDIuNjktMS4zNiw0Ljk1cy40NCwzLjk2LDEuMzEsNWMuODksMS4wNCwyLjA0LDEuNTYsMy40NSwxLjU2LDEuMTQsMCwyLjA4LS4zNSwyLjg0LTEuMDUuNzYtLjcsMS4yNC0xLjc3LDEuNDQtMy4yMlpNMzk5LjE3LDU2NC40OGwuNDEsMi41NWMtLjgxLjE3LTEuNTQuMjUtMi4xNy4yNS0xLjA1LDAtMS44Ny0uMTYtMi40NS0uNDgtLjU3LS4zMy0uOTgtLjc3LTEuMjItMS4zMS0uMjMtLjU0LS4zNC0xLjY4LS4zNC0zLjQydi05LjgxaC0yLjEydi0yLjI1aDIuMTJ2LTQuMjJsMi44OC0xLjczdjUuOTVoMi45MXYyLjI1aC0yLjkxdjkuOThjMCwuODIuMDUsMS4zNS4xNCwxLjU5LjEuMjMuMjcuNDIuNS41Ni4yMy4xNC41Ni4yLjk4LjIuMzIsMCwuNzUtLjA0LDEuMjgtLjExWk00MDIuMDEsNTQ2Ljg0di0zLjMzaDIuODl2My4zM2gtMi44OVpNNDAyLjAxLDU2Ny4wNnYtMTcuMDZoMi44OXYxNy4wNmgtMi44OVpNNDA4LjIyLDU1OC41M2MwLTMuMTYuODgtNS40OSwyLjYyLTcuMDIsMS40Ny0xLjI2LDMuMjYtMS44OSw1LjM4LTEuODksMi4zNCwwLDQuMjYuNzcsNS43NSwyLjMxLDEuNDksMS41MywyLjIzLDMuNjUsMi4yMyw2LjM2LDAsMi4yLS4zMywzLjkzLTEsNS4xOS0uNjYsMS4yNS0xLjYxLDIuMjItMi44OCwyLjkyLTEuMjUuNy0yLjYyLDEuMDUtNC4xMSwxLjA1LTIuMzksMC00LjMyLS43Ny01LjgtMi4zLTEuNDctMS41My0yLjItMy43NC0yLjItNi42MlpNNDExLjE5LDU1OC41M2MwLDIuMTkuNDcsMy44MywxLjQyLDQuOTIuOTYsMS4wOCwyLjE2LDEuNjIsMy42MSwxLjYyczIuNjEtLjU1LDMuNTYtMS42NGMuOTYtMS4wOSwxLjQ0LTIuNzYsMS40NC01LDAtMi4xLS40OC0zLjctMS40NC00Ljc4LS45Ni0xLjA5LTIuMTUtMS42NC0zLjU2LTEuNjRzLTIuNjUuNTQtMy42MSwxLjYyYy0uOTUsMS4wOC0xLjQyLDIuNzEtMS40Miw0Ljg5Wk00MjcuNTksNTY3LjA2di0xNy4wNmgyLjU5djIuNDRjMS4yNi0xLjg4LDMuMDctMi44MSw1LjQ0LTIuODEsMS4wMiwwLDEuOTYuMTksMi44My41Ni44Ni4zNiwxLjUxLjg1LDEuOTQsMS40NS40My41OS43MiwxLjMuODksMi4xMi4xMS41My4xNywxLjQ3LjE3LDIuODF2MTAuNDhoLTIuODl2LTEwLjM4YzAtMS4xOC0uMTEtMi4wNi0uMzQtMi42NC0uMjItLjU4LS42MS0xLjA1LTEuMTktMS4zOS0uNTctLjM1LTEuMjQtLjUzLTIuMDItLjUzLTEuMjQsMC0yLjMxLjM5LTMuMiwxLjE3LS44OS43OC0xLjMzLDIuMjctMS4zMyw0LjQ1djkuMzFoLTIuODlaTTQ2NS4xLDU2Ny4wNmgtMi44OXYtMTguNDJjLS43LjY3LTEuNjEsMS4zMy0yLjczLDItMS4xMi42Ni0yLjE0LDEuMTUtMy4wNSwxLjQ4di0yLjhjMS42MS0uNzYsMy4wMy0xLjY4LDQuMjMtMi43NSwxLjIyLTEuMDgsMi4wOC0yLjE0LDIuNTgtMy4xNmgxLjg2djIzLjY0WiIvPgogICAgICA8cGF0aCBjbGFzcz0ic3Q1IiBkPSJNMjY4LjY0LDYxMS44N2gyNTEuNDN2NjIuMzloLTI1MS40M3YtNjIuMzlaIi8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik0yNjguNjQsNjExLjg3aDI1MS40M3Y2Mi4zOWgtMjUxLjQzdi02Mi4zOVoiLz4KICAgICAgPHBhdGggZD0iTTMyMC4yNyw2NTUuMTZ2LTIzLjU1aDE1Ljg4djIuNzhoLTEyLjc3djcuM2gxMS4wNXYyLjc3aC0xMS4wNXYxMC43aC0zLjExWk0zNTEsNjU1LjE2di0yLjVjLTEuMzIsMS45My0zLjEyLDIuODktNS40MSwyLjg5LTEuMDEsMC0xLjk1LS4xOS0yLjgzLS41OC0uODYtLjM5LTEuNTEtLjg3LTEuOTQtMS40NS0uNDMtLjU4LS43Mi0xLjMtLjg5LTIuMTYtLjExLS41Ni0uMTctMS40Ni0uMTctMi42OXYtMTAuNThoMi44OXY5LjQ3YzAsMS41MS4wNiwyLjUzLjE3LDMuMDUuMTguNzYuNTYsMS4zNiwxLjE0LDEuOC41OS40MywxLjMzLjY0LDIuMi42NHMxLjY4LS4yMiwyLjQ0LS42NmMuNzYtLjQ1LDEuMy0xLjA1LDEuNjEtMS44MS4zMi0uNzcuNDgtMS44OS40OC0zLjM0di05LjE0aDIuODl2MTcuMDZoLTIuNTlaTTM1OC4xMiw2NTUuMTZ2LTE3LjA2aDIuNTl2Mi40NGMxLjI2LTEuODgsMy4wNy0yLjgxLDUuNDQtMi44MSwxLjAyLDAsMS45Ni4xOSwyLjgzLjU2Ljg2LjM2LDEuNTEuODUsMS45NCwxLjQ1LjQzLjU5LjcyLDEuMy44OSwyLjEyLjExLjUzLjE3LDEuNDcuMTcsMi44MXYxMC40OGgtMi44OXYtMTAuMzhjMC0xLjE4LS4xMS0yLjA2LS4zNC0yLjY0LS4yMi0uNTgtLjYxLTEuMDUtMS4xOS0xLjM5LS41Ny0uMzUtMS4yNC0uNTMtMi4wMi0uNTMtMS4yNCwwLTIuMzEuMzktMy4yLDEuMTctLjg5Ljc4LTEuMzMsMi4yNy0xLjMzLDQuNDV2OS4zMWgtMi44OVpNMzg3LjU0LDY0OC45MWwyLjg0LjM4Yy0uMzEsMS45Ni0xLjExLDMuNDktMi4zOSw0LjYxLTEuMjcsMS4xLTIuODQsMS42Ni00LjcsMS42Ni0yLjMzLDAtNC4yMS0uNzYtNS42NC0yLjI4LTEuNDItMS41My0yLjEyLTMuNzItMi4xMi02LjU4LDAtMS44My4zLTMuNDQuOTEtNC44My42MS0xLjM5LDEuNTUtMi40MiwyLjgtMy4xMXMyLjYxLTEuMDMsNC4wOC0xLjAzYzEuODUsMCwzLjM3LjQ3LDQuNTUsMS40MSwxLjE4Ljk0LDEuOTMsMi4yNywyLjI1LDMuOThsLTIuOC40NGMtLjI3LTEuMTUtLjc1LTIuMDEtMS40NC0yLjU4LS42OC0uNTgtMS40OS0uODgtMi40NS0uODgtMS40NiwwLTIuNjUuNTItMy41NiwxLjU2LS45MSwxLjA0LTEuMzYsMi42OS0xLjM2LDQuOTVzLjQ0LDMuOTYsMS4zMSw1Yy44OSwxLjA0LDIuMDQsMS41NiwzLjQ1LDEuNTYsMS4xNCwwLDIuMDgtLjM1LDIuODQtMS4wNS43Ni0uNywxLjI0LTEuNzcsMS40NC0zLjIyWk0zOTkuMTcsNjUyLjU4bC40MSwyLjU1Yy0uODEuMTctMS41NC4yNS0yLjE3LjI1LTEuMDUsMC0xLjg3LS4xNi0yLjQ1LS40OC0uNTctLjMzLS45OC0uNzctMS4yMi0xLjMxLS4yMy0uNTQtLjM0LTEuNjgtLjM0LTMuNDJ2LTkuODFoLTIuMTJ2LTIuMjVoMi4xMnYtNC4yMmwyLjg4LTEuNzN2NS45NWgyLjkxdjIuMjVoLTIuOTF2OS45OGMwLC44Mi4wNSwxLjM1LjE0LDEuNTkuMS4yMy4yNy40Mi41LjU2LjIzLjE0LjU2LjIuOTguMi4zMiwwLC43NS0uMDQsMS4yOC0uMTFaTTQwMi4wMSw2MzQuOTR2LTMuMzNoMi44OXYzLjMzaC0yLjg5Wk00MDIuMDEsNjU1LjE2di0xNy4wNmgyLjg5djE3LjA2aC0yLjg5Wk00MDguMjIsNjQ2LjYzYzAtMy4xNi44OC01LjQ5LDIuNjItNy4wMiwxLjQ3LTEuMjYsMy4yNi0xLjg5LDUuMzgtMS44OSwyLjM0LDAsNC4yNi43Nyw1Ljc1LDIuMzEsMS40OSwxLjUzLDIuMjMsMy42NSwyLjIzLDYuMzYsMCwyLjItLjMzLDMuOTMtMSw1LjE5LS42NiwxLjI1LTEuNjEsMi4yMi0yLjg4LDIuOTItMS4yNS43LTIuNjIsMS4wNS00LjExLDEuMDUtMi4zOSwwLTQuMzItLjc3LTUuOC0yLjMtMS40Ny0xLjUzLTIuMi0zLjc0LTIuMi02LjYyWk00MTEuMTksNjQ2LjYzYzAsMi4xOS40NywzLjgzLDEuNDIsNC45Mi45NiwxLjA4LDIuMTYsMS42MiwzLjYxLDEuNjJzMi42MS0uNTUsMy41Ni0xLjY0Yy45Ni0xLjA5LDEuNDQtMi43NiwxLjQ0LTUsMC0yLjEtLjQ4LTMuNy0xLjQ0LTQuNzgtLjk2LTEuMDktMi4xNS0xLjY0LTMuNTYtMS42NHMtMi42NS41NC0zLjYxLDEuNjJjLS45NSwxLjA4LTEuNDIsMi43MS0xLjQyLDQuODlaTTQyNy41OSw2NTUuMTZ2LTE3LjA2aDIuNTl2Mi40NGMxLjI2LTEuODgsMy4wNy0yLjgxLDUuNDQtMi44MSwxLjAyLDAsMS45Ni4xOSwyLjgzLjU2Ljg2LjM2LDEuNTEuODUsMS45NCwxLjQ1LjQzLjU5LjcyLDEuMy44OSwyLjEyLjExLjUzLjE3LDEuNDcuMTcsMi44MXYxMC40OGgtMi44OXYtMTAuMzhjMC0xLjE4LS4xMS0yLjA2LS4zNC0yLjY0LS4yMi0uNTgtLjYxLTEuMDUtMS4xOS0xLjM5LS41Ny0uMzUtMS4yNC0uNTMtMi4wMi0uNTMtMS4yNCwwLTIuMzEuMzktMy4yLDEuMTctLjg5Ljc4LTEuMzMsMi4yNy0xLjMzLDQuNDV2OS4zMWgtMi44OVpNNDY5LjQxLDY1Mi4zOHYyLjc4aC0xNS41NmMtLjAyLS43LjA5LTEuMzYuMzMtMiwuNC0xLjA2LDEuMDMtMi4xMSwxLjkxLTMuMTRzMi4xNC0yLjIyLDMuNzgtMy41NmMyLjU2LTIuMSw0LjI5LTMuNzcsNS4xOS00Ljk4LjktMS4yMywxLjM0LTIuMzksMS4zNC0zLjQ4cy0uNDEtMi4xMS0xLjIzLTIuODljLS44MS0uNzktMS44OC0xLjE5LTMuMTktMS4xOS0xLjQsMC0yLjUxLjQyLTMuMzQsMS4yNy0uODMuODMtMS4yNiwxLjk4LTEuMjcsMy40NWwtMi45Ny0uM2MuMi0yLjIyLjk2LTMuOTEsMi4yOC01LjA2LDEuMzMtMS4xNywzLjEyLTEuNzUsNS4zNi0xLjc1czQuMDUuNjMsNS4zNiwxLjg5YzEuMzIsMS4yNSwxLjk4LDIuOCwxLjk4LDQuNjQsMCwuOTUtLjE5LDEuODgtLjU4LDIuOC0uMzkuOTEtMS4wMywxLjg2LTEuOTIsMi44OC0uOSwxLTIuMzgsMi4zOC00LjQ1LDQuMTItMS43NCwxLjQ2LTIuODUsMi40NS0zLjM0LDIuOTdzLS45LDEuMDQtMS4yMiwxLjU2aDExLjU1WiIvPgogICAgICA8cGF0aCBjbGFzcz0ic3Q1IiBkPSJNNTQ3LjYxLDUyMy43OGgyNTEuNDN2NjIuMzloLTI1MS40M3YtNjIuMzlaIi8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik01NDcuNjEsNTIzLjc4aDI1MS40M3Y2Mi4zOWgtMjUxLjQzdi02Mi4zOVoiLz4KICAgICAgPHBhdGggZD0iTTYwNi43Myw1NTguODFsMy4xMS43OGMtLjY2LDIuNTYtMS44Myw0LjUyLTMuNTMsNS44NnMtMy43NywyLjAyLTYuMjIsMi4wMi00LjYxLS41Mi02LjItMS41NWMtMS41OC0xLjA0LTIuNzktMi41NC0zLjYyLTQuNS0uODItMS45Ni0xLjIzLTQuMDYtMS4yMy02LjMxLDAtMi40NS40Ny00LjU4LDEuNDEtNi40MS45NC0xLjgzLDIuMjctMy4yMiw0LTQuMTYsMS43My0uOTUsMy42My0xLjQyLDUuNy0xLjQyLDIuMzUsMCw0LjMzLjYsNS45NCwxLjgsMS42MSwxLjIsMi43MywyLjg4LDMuMzYsNS4wNWwtMy4wNi43M2MtLjU1LTEuNzItMS4zNS0yLjk3LTIuMzktMy43NS0xLjAzLS43OC0yLjMzLTEuMTctMy45MS0xLjE3LTEuODEsMC0zLjMzLjQ0LTQuNTUsMS4zMS0xLjIxLjg2LTIuMDYsMi4wMy0yLjU2LDMuNDgtLjQ5LDEuNDYtLjczLDIuOTYtLjczLDQuNTIsMCwyLC4yOSwzLjc1Ljg4LDUuMjUuNTgsMS40OSwxLjQ5LDIuNiwyLjcyLDMuMzQsMS4yNC43NCwyLjU4LDEuMTEsNC4wMiwxLjExLDEuNzQsMCwzLjIxLS41LDQuNDItMS41LDEuMjEtMS4wMSwyLjAzLTIuNTEsMi40Ny00LjQ4Wk02MTMuMjgsNTY3LjA2di0xNy4wNmgyLjU5djIuNTljLjY3LTEuMjEsMS4yOC0yLjAxLDEuODQtMi4zOXMxLjE4LS41OCwxLjg2LS41OGMuOTcsMCwxLjk2LjMxLDIuOTcuOTJsLTEsMi42OWMtLjcxLS40Mi0xLjQyLS42Mi0yLjEyLS42Mi0uNjIsMC0xLjE5LjE5LTEuNy41OC0uNS4zOC0uODUuOS0xLjA2LDEuNTgtLjMyLDEuMDItLjQ4LDIuMTUtLjQ4LDMuMzh2OC45MmgtMi44OVpNNjM1Ljk0LDU2MS41NmwyLjk4LjM4Yy0uNDcsMS43NS0xLjM0LDMuMTEtMi42Miw0LjA4LTEuMjcuOTYtMi45LDEuNDQtNC44OCwxLjQ0LTIuNDksMC00LjQ3LS43Ny01Ljk0LTIuMy0xLjQ2LTEuNTQtMi4xOS0zLjctMi4xOS02LjQ4cy43NC01LjA5LDIuMjItNi42N2MxLjQ4LTEuNTgsMy40LTIuMzgsNS43NS0yLjM4czQuMTQuNzgsNS41OCwyLjMzYzEuNDUsMS41NSwyLjE3LDMuNzMsMi4xNyw2LjU1LDAsLjE4LDAsLjQ0LS4wMi43OGgtMTIuNzJjLjExLDEuODYuNjUsMy4zLDEuNTksNC4zLjk1LDEsMi4xNCwxLjUsMy41NiwxLjUsMS4wNiwwLDEuOTctLjI4LDIuNzItLjgzLjc1LS41NiwxLjM0LTEuNDYsMS43OC0yLjY5Wk02MjYuNDUsNTU2Ljg5aDkuNTJjLS4xMi0xLjQzLS40OS0yLjUtMS4wOS0zLjIyLS45Mi0xLjExLTIuMTEtMS42Ny0zLjU4LTEuNjctMS4zMywwLTIuNDUuNDUtMy4zNiwxLjM0LS45Ljg5LTEuMzksMi4wNy0xLjQ4LDMuNTVaTTY1My42OCw1NjQuOTVjLTEuMDcuOTItMi4xLDEuNTYtMy4wOSwxLjk0LS45OS4zOC0yLjA1LjU2LTMuMTkuNTYtMS44OCwwLTMuMzItLjQ2LTQuMzMtMS4zOC0xLS45Mi0xLjUtMi4wOS0xLjUtMy41MiwwLS44My4xOS0xLjU5LjU2LTIuMjguMzktLjcuODktMS4yNiwxLjUtMS42Ny42MS0uNDIsMS4zMS0uNzMsMi4wOC0uOTQuNTctLjE2LDEuNDMtLjMsMi41OC0uNDQsMi4zMy0uMjgsNC4wNS0uNjEsNS4xNi0xLC4wMS0uNC4wMi0uNjUuMDItLjc1LDAtMS4xOC0uMjgtMi4wMS0uODMtMi40OC0uNzQtLjY2LTEuODMtLjk4LTMuMjgtLjk4LTEuMzYsMC0yLjM3LjI0LTMuMDIuNzItLjY1LjQ3LTEuMTIsMS4zMS0xLjQ0LDIuNTNsLTIuODMtLjM5Yy4yNi0xLjIxLjY4LTIuMTgsMS4yNy0yLjkyLjU5LS43NSwxLjQ0LTEuMzIsMi41NS0xLjcyLDEuMTEtLjQxLDIuNDEtLjYxLDMuODgtLjYxczIuNjQuMTcsMy41NS41MmMuOTIuMzQsMS41OS43OCwyLjAyLDEuMy40My41MS43MiwxLjE2Ljg5LDEuOTUuMS41LjE2LDEuMzkuMTYsMi42N3YzLjg2YzAsMi42OS4wNiw0LjM5LjE3LDUuMDkuMTIuNzEuMzcsMS4zOS43MywyLjA1aC0zLjAyYy0uMy0uNi0uNDktMS4zMS0uNTgtMi4xMVpNNjUzLjQ1LDU1OC41Yy0xLjA1LjQzLTIuNjMuNzktNC43MywxLjA5LTEuMTkuMTgtMi4wMy4zOC0yLjUyLjU5LS40OS4yMS0uODcuNTItMS4xNC45NC0uMjcuNDEtLjQxLjg2LS40MSwxLjM2LDAsLjc3LjI5LDEuNDIuODgsMS45NC41OC41MSwxLjQ0Ljc3LDIuNTYuNzdzMi4xLS4yNCwyLjk3LS43M2MuODgtLjQ5LDEuNTItMS4xNiwxLjkyLTIsLjMxLS42Ni40Ny0xLjYyLjQ3LTIuODl2LTEuMDZaTTY2Ny4xNiw1NjQuNDhsLjQxLDIuNTVjLS44MS4xNy0xLjU0LjI1LTIuMTcuMjUtMS4wNSwwLTEuODctLjE2LTIuNDUtLjQ4LS41Ny0uMzMtLjk4LS43Ny0xLjIyLTEuMzEtLjIzLS41NC0uMzQtMS42OC0uMzQtMy40MnYtOS44MWgtMi4xMnYtMi4yNWgyLjEydi00LjIybDIuODgtMS43M3Y1Ljk1aDIuOTF2Mi4yNWgtMi45MXY5Ljk4YzAsLjgyLjA1LDEuMzUuMTQsMS41OS4xLjIzLjI3LjQyLjUuNTYuMjMuMTQuNTYuMi45OC4yLjMyLDAsLjc1LS4wNCwxLjI4LS4xMVpNNjgxLjY2LDU2MS41NmwyLjk4LjM4Yy0uNDcsMS43NS0xLjM0LDMuMTEtMi42Miw0LjA4LTEuMjcuOTYtMi45LDEuNDQtNC44OCwxLjQ0LTIuNDksMC00LjQ3LS43Ny01Ljk0LTIuMy0xLjQ2LTEuNTQtMi4xOS0zLjctMi4xOS02LjQ4cy43NC01LjA5LDIuMjItNi42NywzLjQtMi4zOCw1Ljc1LTIuMzgsNC4xNC43OCw1LjU4LDIuMzNjMS40NSwxLjU1LDIuMTcsMy43MywyLjE3LDYuNTUsMCwuMTgsMCwuNDQtLjAyLjc4aC0xMi43MmMuMTEsMS44Ni42NSwzLjMsMS41OSw0LjNzMi4xNCwxLjUsMy41NiwxLjVjMS4wNiwwLDEuOTctLjI4LDIuNzItLjgzLjc1LS41NiwxLjM0LTEuNDYsMS43OC0yLjY5Wk02NzIuMTcsNTU2Ljg5aDkuNTJjLS4xMi0xLjQzLS40OS0yLjUtMS4wOS0zLjIyLS45Mi0xLjExLTIuMTEtMS42Ny0zLjU4LTEuNjctMS4zMywwLTIuNDUuNDUtMy4zNiwxLjM0LS45Ljg5LTEuMzksMi4wNy0xLjQ4LDMuNTVaTTY5Ny40Miw1NjcuMDZ2LTE3LjA2aDIuNTl2Mi40NGMxLjI2LTEuODgsMy4wNy0yLjgxLDUuNDQtMi44MSwxLjAyLDAsMS45Ni4xOSwyLjgzLjU2Ljg2LjM2LDEuNTEuODUsMS45NCwxLjQ1LjQzLjU5LjcyLDEuMy44OSwyLjEyLjExLjUzLjE3LDEuNDcuMTcsMi44MXYxMC40OGgtMi44OXYtMTAuMzhjMC0xLjE4LS4xMS0yLjA2LS4zNC0yLjY0LS4yMi0uNTgtLjYxLTEuMDUtMS4xOS0xLjM5LS41Ny0uMzUtMS4yNC0uNTMtMi4wMi0uNTMtMS4yNCwwLTIuMzEuMzktMy4yLDEuMTctLjg5Ljc4LTEuMzMsMi4yNy0xLjMzLDQuNDV2OS4zMWgtMi44OVpNNzE0LjYzLDU1OC41M2MwLTMuMTYuODctNS40OSwyLjYyLTcuMDIsMS40Ny0xLjI2LDMuMjYtMS44OSw1LjM4LTEuODksMi4zNCwwLDQuMjYuNzcsNS43NSwyLjMxLDEuNDksMS41MywyLjIzLDMuNjUsMi4yMyw2LjM2LDAsMi4yLS4zMywzLjkzLTEsNS4xOS0uNjYsMS4yNS0xLjYxLDIuMjItMi44OCwyLjkyLTEuMjUuNy0yLjYyLDEuMDUtNC4xMSwxLjA1LTIuMzksMC00LjMyLS43Ny01LjgtMi4zLTEuNDctMS41My0yLjItMy43NC0yLjItNi42MlpNNzE3LjYsNTU4LjUzYzAsMi4xOS40NywzLjgzLDEuNDIsNC45Mi45NiwxLjA4LDIuMTYsMS42MiwzLjYxLDEuNjJzMi42MS0uNTUsMy41Ni0xLjY0Yy45Ni0xLjA5LDEuNDQtMi43NiwxLjQ0LTUsMC0yLjEtLjQ4LTMuNy0xLjQ0LTQuNzgtLjk2LTEuMDktMi4xNS0xLjY0LTMuNTYtMS42NHMtMi42NS41NC0zLjYxLDEuNjJjLS45NSwxLjA4LTEuNDIsMi43MS0xLjQyLDQuODlaTTc0MC4zMSw1NjQuNDhsLjQxLDIuNTVjLS44MS4xNy0xLjU0LjI1LTIuMTcuMjUtMS4wNSwwLTEuODctLjE2LTIuNDUtLjQ4LS41Ny0uMzMtLjk4LS43Ny0xLjIyLTEuMzEtLjIzLS41NC0uMzQtMS42OC0uMzQtMy40MnYtOS44MWgtMi4xMnYtMi4yNWgyLjEydi00LjIybDIuODgtMS43M3Y1Ljk1aDIuOTF2Mi4yNWgtMi45MXY5Ljk4YzAsLjgyLjA1LDEuMzUuMTQsMS41OS4xLjIzLjI3LjQyLjUuNTYuMjMuMTQuNTYuMi45OC4yLjMyLDAsLjc1LS4wNCwxLjI4LS4xMVpNNzU0LjgxLDU2MS41NmwyLjk4LjM4Yy0uNDcsMS43NS0xLjM0LDMuMTEtMi42Miw0LjA4LTEuMjcuOTYtMi45LDEuNDQtNC44OCwxLjQ0LTIuNDksMC00LjQ3LS43Ny01Ljk0LTIuMy0xLjQ2LTEuNTQtMi4xOS0zLjctMi4xOS02LjQ4cy43NC01LjA5LDIuMjItNi42N2MxLjQ4LTEuNTgsMy40LTIuMzgsNS43NS0yLjM4czQuMTQuNzgsNS41OCwyLjMzYzEuNDUsMS41NSwyLjE3LDMuNzMsMi4xNyw2LjU1LDAsLjE4LDAsLjQ0LS4wMi43OGgtMTIuNzJjLjExLDEuODYuNjUsMy4zLDEuNTksNC4zLjk1LDEsMi4xNCwxLjUsMy41NiwxLjUsMS4wNiwwLDEuOTctLjI4LDIuNzItLjgzLjc1LS41NiwxLjM0LTEuNDYsMS43OC0yLjY5Wk03NDUuMzMsNTU2Ljg5aDkuNTJjLS4xMi0xLjQzLS40OS0yLjUtMS4wOS0zLjIyLS45Mi0xLjExLTIuMTEtMS42Ny0zLjU4LTEuNjctMS4zMywwLTIuNDUuNDUtMy4zNiwxLjM0LS45Ljg5LTEuMzksMi4wNy0xLjQ4LDMuNTVaIi8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDUiIGQ9Ik01NDcuNjEsNjExLjg3aDI1MS40M3Y2Mi4zOWgtMjUxLjQzdi02Mi4zOVoiLz4KICAgICAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTU0Ny42MSw2MTEuODdoMjUxLjQzdjYyLjM5aC0yNTEuNDN2LTYyLjM5WiIvPgogICAgICA8cGF0aCBkPSJNNjExLjAyLDY1NS4xNnYtMjMuNTVoMTcuMDJ2Mi43OGgtMTMuOTF2Ny4yMmgxMy4wMnYyLjc1aC0xMy4wMnY4LjAyaDE0LjQ1djIuNzhoLTE3LjU2Wk02NDMuNTgsNjU1LjE2di0yLjE2Yy0xLjA4LDEuNy0yLjY3LDIuNTUtNC43NywyLjU1LTEuMzYsMC0yLjYyLS4zOC0zLjc3LTEuMTItMS4xNC0uNzUtMi4wMi0xLjgtMi42NC0zLjE0cy0uOTQtMi44OS0uOTQtNC42NC4yOC0zLjI0Ljg0LTQuNjJjLjU3LTEuMzksMS40My0yLjQ1LDIuNTYtMy4xOSwxLjE0LS43NCwyLjQtMS4xMSwzLjgtMS4xMSwxLjAzLDAsMS45NS4yMiwyLjc1LjY2LjguNDMsMS40Ni45OSwxLjk3LDEuNjl2LTguNDVoMi44OHYyMy41NWgtMi42OVpNNjM0LjQ0LDY0Ni42NGMwLDIuMTkuNDYsMy44MiwxLjM4LDQuOTEuOTMsMS4wOCwyLjAyLDEuNjIsMy4yNywxLjYyczIuMzMtLjUyLDMuMjItMS41NWMuODktMS4wNCwxLjMzLTIuNjIsMS4zMy00LjczLDAtMi4zMy0uNDUtNC4wNS0xLjM2LTUuMTQtLjktMS4wOS0yLTEuNjQtMy4zMS0xLjY0cy0yLjM1LjUzLTMuMjIsMS41OGMtLjg2LDEuMDQtMS4zLDIuNjktMS4zLDQuOTVaTTY1MC44Myw2MzQuOTR2LTMuMzNoMi44OXYzLjMzaC0yLjg5Wk02NTAuODMsNjU1LjE2di0xNy4wNmgyLjg5djE3LjA2aC0yLjg5Wk02NjQuNDMsNjUyLjU4bC40MSwyLjU1Yy0uODEuMTctMS41NC4yNS0yLjE3LjI1LTEuMDUsMC0xLjg3LS4xNi0yLjQ1LS40OC0uNTctLjMzLS45OC0uNzctMS4yMi0xLjMxLS4yMy0uNTQtLjM0LTEuNjgtLjM0LTMuNDJ2LTkuODFoLTIuMTJ2LTIuMjVoMi4xMnYtNC4yMmwyLjg4LTEuNzN2NS45NWgyLjkxdjIuMjVoLTIuOTF2OS45OGMwLC44Mi4wNSwxLjM1LjE0LDEuNTkuMS4yMy4yNy40Mi41LjU2LjIzLjE0LjU2LjIuOTguMi4zMiwwLC43NS0uMDQsMS4yOC0uMTFaTTY3Ni4zOSw2NTUuMTZ2LTE3LjA2aDIuNTl2Mi40NGMxLjI2LTEuODgsMy4wNy0yLjgxLDUuNDQtMi44MSwxLjAyLDAsMS45Ni4xOSwyLjgzLjU2Ljg2LjM2LDEuNTEuODUsMS45NCwxLjQ1LjQzLjU5LjcyLDEuMy44OSwyLjEyLjExLjUzLjE3LDEuNDcuMTcsMi44MXYxMC40OGgtMi44OXYtMTAuMzhjMC0xLjE4LS4xMS0yLjA2LS4zNC0yLjY0LS4yMi0uNTgtLjYxLTEuMDUtMS4xOS0xLjM5LS41Ny0uMzUtMS4yNC0uNTMtMi4wMi0uNTMtMS4yNCwwLTIuMzEuMzktMy4yLDEuMTctLjg5Ljc4LTEuMzMsMi4yNy0xLjMzLDQuNDV2OS4zMWgtMi44OVpNNjkzLjYxLDY0Ni42M2MwLTMuMTYuODgtNS40OSwyLjYyLTcuMDIsMS40Ny0xLjI2LDMuMjYtMS44OSw1LjM4LTEuODksMi4zNCwwLDQuMjYuNzcsNS43NSwyLjMxLDEuNDksMS41MywyLjIzLDMuNjUsMi4yMyw2LjM2LDAsMi4yLS4zMywzLjkzLTEsNS4xOS0uNjYsMS4yNS0xLjYxLDIuMjItMi44OCwyLjkyLTEuMjUuNy0yLjYyLDEuMDUtNC4xMSwxLjA1LTIuMzksMC00LjMyLS43Ny01LjgtMi4zLTEuNDctMS41My0yLjItMy43NC0yLjItNi42MlpNNjk2LjU4LDY0Ni42M2MwLDIuMTkuNDcsMy44MywxLjQyLDQuOTIuOTYsMS4wOCwyLjE2LDEuNjIsMy42MSwxLjYyczIuNjEtLjU1LDMuNTYtMS42NGMuOTYtMS4wOSwxLjQ0LTIuNzYsMS40NC01LDAtMi4xLS40OC0zLjctMS40NC00Ljc4LS45Ni0xLjA5LTIuMTUtMS42NC0zLjU2LTEuNjRzLTIuNjUuNTQtMy42MSwxLjYyYy0uOTUsMS4wOC0xLjQyLDIuNzEtMS40Miw0Ljg5Wk03MTkuMjksNjUyLjU4bC40MSwyLjU1Yy0uODEuMTctMS41NC4yNS0yLjE3LjI1LTEuMDUsMC0xLjg3LS4xNi0yLjQ1LS40OC0uNTctLjMzLS45OC0uNzctMS4yMi0xLjMxLS4yMy0uNTQtLjM0LTEuNjgtLjM0LTMuNDJ2LTkuODFoLTIuMTJ2LTIuMjVoMi4xMnYtNC4yMmwyLjg4LTEuNzN2NS45NWgyLjkxdjIuMjVoLTIuOTF2OS45OGMwLC44Mi4wNSwxLjM1LjE0LDEuNTkuMS4yMy4yNy40Mi41LjU2LjIzLjE0LjU2LjIuOTguMi4zMiwwLC43NS0uMDQsMS4yOC0uMTFaTTczMy43OSw2NDkuNjZsMi45OC4zOGMtLjQ3LDEuNzUtMS4zNCwzLjExLTIuNjIsNC4wOC0xLjI3Ljk2LTIuOSwxLjQ0LTQuODgsMS40NC0yLjQ5LDAtNC40Ny0uNzctNS45NC0yLjMtMS40Ni0xLjU0LTIuMTktMy43LTIuMTktNi40OHMuNzQtNS4wOSwyLjIyLTYuNjdjMS40OC0xLjU4LDMuNC0yLjM4LDUuNzUtMi4zOHM0LjE0Ljc4LDUuNTgsMi4zM2MxLjQ1LDEuNTUsMi4xNywzLjczLDIuMTcsNi41NSwwLC4xOCwwLC40NC0uMDIuNzhoLTEyLjcyYy4xMSwxLjg2LjY1LDMuMywxLjU5LDQuMy45NSwxLDIuMTQsMS41LDMuNTYsMS41LDEuMDYsMCwxLjk3LS4yOCwyLjcyLS44My43NS0uNTYsMS4zNC0xLjQ2LDEuNzgtMi42OVpNNzI0LjMsNjQ0Ljk5aDkuNTJjLS4xMi0xLjQzLS40OS0yLjUtMS4wOS0zLjIyLS45Mi0xLjExLTIuMTEtMS42Ny0zLjU4LTEuNjctMS4zMywwLTIuNDUuNDUtMy4zNiwxLjM0LS45Ljg5LTEuMzksMi4wNy0xLjQ4LDMuNTVaIi8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDYiIGQ9Ik0xNy4zMSw3OTUuMDNoMGMwLTcuNjMsNi4xOS0xMy44MiwxMy44Mi0xMy44MmgzMjYuNTdjMy42NiwwLDcuMTgsMS40Niw5Ljc3LDQuMDUsMi41OSwyLjU5LDQuMDUsNi4xMSw0LjA1LDkuNzd2ODkuODFjMCw3LjYzLTYuMTksMTMuODItMTMuODIsMTMuODJIMzEuMTNjLTcuNjMsMC0xMy44Mi02LjE5LTEzLjgyLTEzLjgydi04OS44MVoiLz4KICAgICAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTE3LjMxLDc5NS4wM2gwYzAtNy42Myw2LjE5LTEzLjgyLDEzLjgyLTEzLjgyaDMyNi41N2MzLjY2LDAsNy4xOCwxLjQ2LDkuNzcsNC4wNSwyLjU5LDIuNTksNC4wNSw2LjExLDQuMDUsOS43N3Y4OS44MWMwLDcuNjMtNi4xOSwxMy44Mi0xMy44MiwxMy44MkgzMS4xM2MtNy42MywwLTEzLjgyLTYuMTktMTMuODItMTMuODJ2LTg5LjgxWiIvPgogICAgICA8cGF0aCBkPSJNMTE5LjY3LDg1NC4zNHYtMTIuMDVsLTEwLjUtMTYuNTloNi43OGw2LjczLDExLjMzLDYuNjEtMTEuMzNoNi42NmwtMTAuNTMsMTYuNjJ2MTIuMDJoLTUuNzVaTTEzNC41NSw4NDMuNjdjMC0xLjgyLjQ1LTMuNTgsMS4zNC01LjI4LjktMS43MSwyLjE3LTMuMDEsMy44MS0zLjkxLDEuNjUtLjkxLDMuNDgtMS4zNiw1LjUyLTEuMzYsMy4xNSwwLDUuNzIsMS4wMiw3LjcyLDMuMDYsMi4wMSwyLjA0LDMuMDIsNC42MSwzLjAyLDcuNzJzLTEuMDIsNS43NS0zLjA1LDcuODFjLTIuMDIsMi4wNi00LjU3LDMuMDktNy42NCwzLjA5LTEuOTEsMC0zLjcyLS40My01LjQ1LTEuMjgtMS43Mi0uODYtMy4wMy0yLjEyLTMuOTItMy43OC0uOS0xLjY3LTEuMzQtMy42OS0xLjM0LTYuMDhaTTE0MC4xOCw4NDMuOTZjMCwyLjA2LjQ4LDMuNjQsMS40NSw0LjczLjk4LDEuMDksMi4xOSwxLjY0LDMuNjIsMS42NHMyLjYyLS41NSwzLjU5LTEuNjQsMS40NS0yLjY4LDEuNDUtNC43Ny0uNDgtMy41OS0xLjQ1LTQuNjktMi4xNy0xLjY0LTMuNTktMS42NC0yLjY1LjU1LTMuNjIsMS42NGMtLjk3LDEuMDktMS40NSwyLjY3LTEuNDUsNC43MlpNMTczLjkxLDg1NC4zNHYtMy4xMWMtLjc2LDEuMS0xLjc2LDEuOTgtMi45OCwyLjYyLTEuMjMuNjQtMi41My45NS0zLjg5Ljk1cy0yLjY1LS4zMS0zLjc3LS45MmMtMS4xLS42MS0xLjkxLTEuNDctMi40MS0yLjU4LS40OS0xLjEtLjczLTIuNjQtLjczLTQuNTl2LTEzLjEyaDUuNXY5LjUzYzAsMi45Mi4xLDQuNzEuMyw1LjM4LjIuNjYuNTYsMS4xOCwxLjA5LDEuNTYuNTQuMzgsMS4yMi41NiwyLjA1LjU2Ljk0LDAsMS43OC0uMjYsMi41Mi0uNzcuNzQtLjUxLDEuMjQtMS4xNSwxLjUyLTEuOTEuMjgtLjc3LjQyLTIuNjQuNDItNS42MXYtOC43NWg1LjQ4djIwLjc1aC01LjA5Wk0xODkuOTMsODU0LjM0aC01LjQ4di0yMC43NWg1LjA5djIuOTVjLjg3LTEuNCwxLjY2LTIuMzEsMi4zNi0yLjc1LjctLjQ1LDEuNDktLjY3LDIuMzgtLjY3LDEuMjUsMCwyLjQ1LjM1LDMuNjEsMS4wNWwtMS43LDQuNzhjLS45My0uNi0xLjc5LS45MS0yLjU4LS45MXMtMS40Mi4yMS0xLjk1LjY0Yy0uNTMuNDMtLjk1LDEuMTktMS4yNywyLjMtLjMsMS4xLS40NSwzLjQyLS40NSw2Ljk1djYuNDFaTTIxNS40Niw4MzkuOTJsLTQuOTctLjg5Yy41NS0yLjAxLDEuNTEtMy40OSwyLjg4LTQuNDUsMS4zNy0uOTcsMy40MS0xLjQ1LDYuMTEtMS40NSwyLjQ1LDAsNC4yNy4yOSw1LjQ3Ljg4LDEuMi41OCwyLjA0LDEuMzIsMi41MiwyLjIyLjQ5Ljg5LjczLDIuNTIuNzMsNC45MWwtLjA1LDYuNDFjMCwxLjgyLjA4LDMuMTcuMjUsNC4wMy4xOC44Ni41MSwxLjc5LDEsMi43OGgtNS40NGMtLjE1LS4zNi0uMzItLjkxLS41My0xLjYyLS4wOC0uMzItLjE1LS41NC0uMTktLjY0LS45NC45MS0xLjk0LDEuNTktMy4wMiwyLjA1LTEuMDYuNDYtMi4yLjY5LTMuNDEuNjktMi4xNCwwLTMuODItLjU4LTUuMDYtMS43My0xLjIzLTEuMTctMS44NC0yLjY0LTEuODQtNC40MSwwLTEuMTcuMjgtMi4yMS44NC0zLjEyLjU2LS45MiwxLjM1LTEuNjIsMi4zNi0yLjExLDEuMDEtLjQ5LDIuNDYtLjkyLDQuMzYtMS4yOCwyLjU2LS40OCw0LjM0LS45Myw1LjMzLTEuMzR2LS41NWMwLTEuMDYtLjI2LTEuODItLjc4LTIuMjctLjUyLS40NS0xLjUtLjY3LTIuOTQtLjY3LS45OCwwLTEuNzQuMTktMi4zLjU4LS41NC4zOS0uOTgsMS4wNi0xLjMzLDIuMDJaTTIyMi44LDg0NC4zN2MtLjcuMjQtMS44MS41Mi0zLjM0Ljg0LTEuNTIuMzItMi41Mi42NC0yLjk4Ljk1LS43MS41MS0xLjA2LDEuMTYtMS4wNiwxLjk0LDAsLjc3LjI5LDEuNDQuODYsMiwuNTcuNTUsMS4zLjgzLDIuMTkuODMuOTksMCwxLjkzLS4zMiwyLjgzLS45Ny42Ny0uNSwxLjEtMS4xLDEuMzEtMS44MS4xNC0uNDcuMi0xLjM2LjItMi42OXYtMS4wOVpNMjMzLjQ1LDgzMy41OWg1LjExdjMuMDVjLjY3LTEuMDQsMS41Ny0xLjg5LDIuNy0yLjUzLDEuMTQtLjY2LDIuMzktLjk4LDMuNzctLjk4LDIuNDEsMCw0LjQ1Ljk1LDYuMTIsMi44NCwxLjY5LDEuODksMi41Myw0LjUyLDIuNTMsNy44OSwwLDMuNDYtLjg1LDYuMTUtMi41NSw4LjA4LTEuNjksMS45Mi0zLjczLDIuODgtNi4xNCwyLjg4LTEuMTUsMC0yLjE5LS4yMy0zLjEyLS42OS0uOTMtLjQ2LTEuOTEtMS4yNC0yLjk0LTIuMzR2MTAuNDVoLTUuNDh2LTI4LjY0Wk0yMzguODcsODQzLjYyYzAsMi4zMi40Niw0LjA0LDEuMzksNS4xNi45MywxLjExLDIuMDUsMS42NywzLjM4LDEuNjdzMi4zNC0uNTEsMy4xOS0xLjUzYy44NC0xLjAyLDEuMjctMi43LDEuMjctNS4wMywwLTIuMTgtLjQ0LTMuNzktMS4zMS00Ljg0LS44Ni0xLjA1LTEuOTQtMS41OC0zLjIzLTEuNThzLTIuNDYuNTItMy4zNCwxLjU2Yy0uODksMS4wMy0xLjMzLDIuNTYtMS4zMyw0LjU5Wk0yNTcuODksODMzLjU5aDUuMTF2My4wNWMuNjctMS4wNCwxLjU3LTEuODksMi43LTIuNTMsMS4xNC0uNjYsMi4zOS0uOTgsMy43Ny0uOTgsMi40MSwwLDQuNDUuOTUsNi4xMiwyLjg0LDEuNjksMS44OSwyLjUzLDQuNTIsMi41Myw3Ljg5cy0uODUsNi4xNS0yLjU1LDguMDhjLTEuNjksMS45Mi0zLjczLDIuODgtNi4xNCwyLjg4LTEuMTUsMC0yLjE5LS4yMy0zLjEyLS42OS0uOTMtLjQ2LTEuOTEtMS4yNC0yLjk0LTIuMzR2MTAuNDVoLTUuNDh2LTI4LjY0Wk0yNjMuMzEsODQzLjYyYzAsMi4zMi40Niw0LjA0LDEuMzksNS4xNi45MywxLjExLDIuMDUsMS42NywzLjM4LDEuNjdzMi4zNC0uNTEsMy4xOS0xLjUzYy44NC0xLjAyLDEuMjctMi43LDEuMjctNS4wMywwLTIuMTgtLjQ0LTMuNzktMS4zMS00Ljg0LS44Ni0xLjA1LTEuOTQtMS41OC0zLjIzLTEuNThzLTIuNDYuNTItMy4zNCwxLjU2Yy0uODksMS4wMy0xLjMzLDIuNTYtMS4zMyw0LjU5WiIvPgogICAgICA8cGF0aCBjbGFzcz0ic3Q2IiBkPSJNNjk5Ljg3LDc5NS4wM2gwYzAtNy42Myw2LjE5LTEzLjgyLDEzLjgyLTEzLjgyaDMyNi41N2MzLjY2LDAsNy4xOCwxLjQ2LDkuNzcsNC4wNSwyLjU5LDIuNTksNC4wNSw2LjExLDQuMDUsOS43N3Y4OS44MWMwLDcuNjMtNi4xOSwxMy44Mi0xMy44MiwxMy44MmgtMzI2LjU3Yy03LjYzLDAtMTMuODItNi4xOS0xMy44Mi0xMy44MnYtODkuODFaIi8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDEiIGQ9Ik02OTkuODcsNzk1LjAzaDBjMC03LjYzLDYuMTktMTMuODIsMTMuODItMTMuODJoMzI2LjU3YzMuNjYsMCw3LjE4LDEuNDYsOS43Nyw0LjA1LDIuNTksMi41OSw0LjA1LDYuMTEsNC4wNSw5Ljc3djg5LjgxYzAsNy42My02LjE5LDEzLjgyLTEzLjgyLDEzLjgyaC0zMjYuNTdjLTcuNjMsMC0xMy44Mi02LjE5LTEzLjgyLTEzLjgydi04OS44MVoiLz4KICAgICAgPHBhdGggZD0iTTc4My4yNiw4NTQuMzR2LTI4LjY0aDUuNjJsMTEuNzIsMTkuMTJ2LTE5LjEyaDUuMzh2MjguNjRoLTUuOGwtMTEuNTUtMTguNjd2MTguNjdoLTUuMzhaTTgxMC43OSw4NDMuNjdjMC0xLjgyLjQ1LTMuNTgsMS4zNC01LjI4LjktMS43MSwyLjE3LTMuMDEsMy44MS0zLjkxLDEuNjUtLjkxLDMuNDgtMS4zNiw1LjUyLTEuMzYsMy4xNSwwLDUuNzIsMS4wMiw3LjcyLDMuMDYsMi4wMSwyLjA0LDMuMDIsNC42MSwzLjAyLDcuNzJzLTEuMDIsNS43NS0zLjA1LDcuODFjLTIuMDIsMi4wNi00LjU3LDMuMDktNy42NCwzLjA5LTEuOTEsMC0zLjcyLS40My01LjQ1LTEuMjgtMS43Mi0uODYtMy4wMy0yLjEyLTMuOTItMy43OC0uOS0xLjY3LTEuMzQtMy42OS0xLjM0LTYuMDhaTTgxNi40MSw4NDMuOTZjMCwyLjA2LjQ4LDMuNjQsMS40NSw0LjczLjk4LDEuMDksMi4xOSwxLjY0LDMuNjIsMS42NHMyLjYyLS41NSwzLjU5LTEuNjQsMS40NS0yLjY4LDEuNDUtNC43Ny0uNDgtMy41OS0xLjQ1LTQuNjktMi4xNy0xLjY0LTMuNTktMS42NC0yLjY1LjU1LTMuNjIsMS42NGMtLjk3LDEuMDktMS40NSwyLjY3LTEuNDUsNC43MlpNODQ2LDgzMy41OXY0LjM4aC0zLjc1djguMzZjMCwxLjcuMDMsMi42OS4wOSwyLjk3LjA3LjI4LjIzLjUyLjQ4LjcuMjYuMTguNTcuMjcuOTQuMjcuNTEsMCwxLjI0LS4xOCwyLjItLjUzbC40Nyw0LjI1Yy0xLjI3LjU1LTIuNzEuODMtNC4zMy44My0uOTksMC0xLjg5LS4xNy0yLjY5LS41LS43OS0uMzMtMS4zOC0uNzYtMS43NS0xLjI4LS4zNi0uNTMtLjYyLTEuMjQtLjc3LTIuMTQtLjExLS42NS0uMTctMS45NC0uMTctMy44OHYtOS4wNWgtMi41MnYtNC4zOGgyLjUydi00LjExbDUuNTItMy4ydjcuMzFoMy43NVpNODYxLjgyLDg0Ny43M2w1LjQ3LjkyYy0uNzEsMi4wMS0xLjgyLDMuNTQtMy4zNCw0LjU5LTEuNTEsMS4wNC0zLjQxLDEuNTYtNS42OSwxLjU2LTMuNiwwLTYuMjctMS4xOC04LTMuNTMtMS4zOC0xLjktMi4wNi00LjI4LTIuMDYtNy4xNiwwLTMuNDQuOS02LjEzLDIuNjktOC4wOCwxLjgtMS45NSw0LjA4LTIuOTIsNi44My0yLjkyLDMuMDgsMCw1LjUyLDEuMDIsNy4zLDMuMDYsMS43OSwyLjA0LDIuNjUsNS4xNiwyLjU2LDkuMzZoLTEzLjc1Yy4wNCwxLjY0LjQ4LDIuOTEsMS4zMywzLjgxLjg1LjksMS45MSwxLjM0LDMuMTcsMS4zNC44NSwwLDEuNTctLjIzLDIuMTYtLjcuNTktLjQ3LDEuMDQtMS4yMiwxLjM0LTIuMjdaTTg2Mi4xNCw4NDIuMThjLS4wNC0xLjU4LS40NS0yLjc5LTEuMjMtMy42MS0uNzgtLjgzLTEuNzMtMS4yNS0yLjg2LTEuMjUtMS4yLDAtMi4xOS40NC0yLjk3LDEuMzFzLTEuMTYsMi4wNi0xLjE0LDMuNTVoOC4yWk04NzAuMTIsODQ4LjQybDUuNTItLjg0Yy4yMywxLjA3LjcsMS44OSwxLjQyLDIuNDQuNzIuNTUsMS43Mi44MywzLC44MywxLjQzLDAsMi40OS0uMjYsMy4yLS43OC40OS0uMzYuNzMtLjg1LjczLTEuNDcsMC0uNDItLjEzLS43Ni0uMzktMS4wMy0uMjgtLjI2LS45LS41LTEuODQtLjcyLTQuNDMtLjk4LTcuMjMtMS44Ny04LjQyLTIuNjctMS42NC0xLjEyLTIuNDUtMi42OC0yLjQ1LTQuNjcsMC0xLjguNzEtMy4zMSwyLjEyLTQuNTMsMS40Mi0xLjIzLDMuNjItMS44NCw2LjYxLTEuODQsMi44MywwLDQuOTQuNDYsNi4zMSwxLjM5LDEuMzkuOTMsMi4zNCwyLjMsMi44Niw0LjExbC01LjE3Ljk1Yy0uMjItLjgxLS42NC0xLjQzLTEuMjctMS44Ni0uNjEtLjQzLTEuNDktLjY0LTIuNjQtLjY0LTEuNDUsMC0yLjQ4LjItMy4xMS42MS0uNDIuMjgtLjYyLjY1LS42MiwxLjExLDAsLjM5LjE4LjcyLjU1LDEsLjUuMzYsMi4yMS44OCw1LjEyLDEuNTUsMi45My42Niw0Ljk3LDEuNDcsNi4xMiwyLjQ0LDEuMTUuOTcsMS43MiwyLjMzLDEuNzIsNC4wOCwwLDEuOS0uOCwzLjUzLTIuMzksNC45MS0xLjU4LDEuMzYtMy45MywyLjA1LTcuMDUsMi4wNS0yLjgyLDAtNS4wNi0uNTctNi43LTEuNzItMS42NS0xLjE1LTIuNzItMi43LTMuMjMtNC42N1pNOTA5LjUxLDgzOS45MmwtNC45Ny0uODljLjU1LTIuMDEsMS41MS0zLjQ5LDIuODgtNC40NSwxLjM4LS45NywzLjQxLTEuNDUsNi4xMS0xLjQ1LDIuNDUsMCw0LjI3LjI5LDUuNDcuODgsMS4yLjU4LDIuMDQsMS4zMiwyLjUyLDIuMjIuNDkuODkuNzMsMi41Mi43Myw0LjkxbC0uMDUsNi40MWMwLDEuODIuMDgsMy4xNy4yNSw0LjAzLjE4Ljg2LjUxLDEuNzksMSwyLjc4aC01LjQ0Yy0uMTUtLjM2LS4zMi0uOTEtLjUzLTEuNjItLjA4LS4zMi0uMTUtLjU0LS4xOS0uNjQtLjk0LjkxLTEuOTQsMS41OS0zLjAyLDIuMDUtMS4wNi40Ni0yLjIuNjktMy40MS42OS0yLjE0LDAtMy44Mi0uNTgtNS4wNi0xLjczLTEuMjMtMS4xNy0xLjg0LTIuNjQtMS44NC00LjQxLDAtMS4xNy4yOC0yLjIxLjg0LTMuMTIuNTYtLjkyLDEuMzUtMS42MiwyLjM2LTIuMTEsMS4wMS0uNDksMi40Ni0uOTIsNC4zNi0xLjI4LDIuNTYtLjQ4LDQuMzQtLjkzLDUuMzMtMS4zNHYtLjU1YzAtMS4wNi0uMjYtMS44Mi0uNzgtMi4yNy0uNTItLjQ1LTEuNS0uNjctMi45NC0uNjctLjk4LDAtMS43NC4xOS0yLjMuNTgtLjU0LjM5LS45OCwxLjA2LTEuMzMsMi4wMlpNOTE2Ljg1LDg0NC4zN2MtLjcuMjQtMS44MS41Mi0zLjM0Ljg0LTEuNTIuMzItMi41Mi42NC0yLjk4Ljk1LS43MS41MS0xLjA2LDEuMTYtMS4wNiwxLjk0cy4yOSwxLjQ0Ljg2LDJjLjU3LjU1LDEuMy44MywyLjE5LjgzLjk5LDAsMS45My0uMzIsMi44My0uOTcuNjctLjUsMS4xLTEuMSwxLjMxLTEuODEuMTQtLjQ3LjItMS4zNi4yLTIuNjl2LTEuMDlaTTkyNy41LDgzMy41OWg1LjExdjMuMDVjLjY3LTEuMDQsMS41Ny0xLjg5LDIuNy0yLjUzLDEuMTQtLjY2LDIuMzktLjk4LDMuNzctLjk4LDIuNDEsMCw0LjQ1Ljk1LDYuMTIsMi44NCwxLjY5LDEuODksMi41Myw0LjUyLDIuNTMsNy44OXMtLjg1LDYuMTUtMi41NSw4LjA4Yy0xLjY5LDEuOTItMy43MywyLjg4LTYuMTQsMi44OC0xLjE1LDAtMi4xOS0uMjMtMy4xMi0uNjktLjkzLS40Ni0xLjkxLTEuMjQtMi45NC0yLjM0djEwLjQ1aC01LjQ4di0yOC42NFpNOTMyLjkzLDg0My42MmMwLDIuMzIuNDYsNC4wNCwxLjM5LDUuMTYuOTMsMS4xMSwyLjA1LDEuNjcsMy4zOCwxLjY3czIuMzQtLjUxLDMuMTktMS41M2MuODQtMS4wMiwxLjI3LTIuNywxLjI3LTUuMDMsMC0yLjE4LS40NC0zLjc5LTEuMzEtNC44NC0uODYtMS4wNS0xLjk0LTEuNTgtMy4yMy0xLjU4cy0yLjQ2LjUyLTMuMzQsMS41NmMtLjg5LDEuMDMtMS4zMywyLjU2LTEuMzMsNC41OVpNOTUxLjk0LDgzMy41OWg1LjExdjMuMDVjLjY3LTEuMDQsMS41Ny0xLjg5LDIuNy0yLjUzLDEuMTQtLjY2LDIuMzktLjk4LDMuNzctLjk4LDIuNDEsMCw0LjQ1Ljk1LDYuMTIsMi44NCwxLjY5LDEuODksMi41Myw0LjUyLDIuNTMsNy44OXMtLjg1LDYuMTUtMi41NSw4LjA4Yy0xLjY5LDEuOTItMy43MywyLjg4LTYuMTQsMi44OC0xLjE1LDAtMi4xOS0uMjMtMy4xMi0uNjktLjkzLS40Ni0xLjkxLTEuMjQtMi45NC0yLjM0djEwLjQ1aC01LjQ4di0yOC42NFpNOTU3LjM2LDg0My42MmMwLDIuMzIuNDYsNC4wNCwxLjM5LDUuMTYuOTMsMS4xMSwyLjA1LDEuNjcsMy4zOCwxLjY3czIuMzQtLjUxLDMuMTktMS41M2MuODQtMS4wMiwxLjI3LTIuNywxLjI3LTUuMDMsMC0yLjE4LS40NC0zLjc5LTEuMzEtNC44NC0uODYtMS4wNS0xLjk0LTEuNTgtMy4yMy0xLjU4cy0yLjQ2LjUyLTMuMzQsMS41NmMtLjg5LDEuMDMtMS4zMywyLjU2LTEuMzMsNC41OVoiLz4KICAgICAgPHBhdGggY2xhc3M9InN0OCIgZD0iTTE5NC40Miw3ODEuMjF2LTIyNi4yNGg3NC4yNCIvPgogICAgICA8cGF0aCBjbGFzcz0ic3QyIiBkPSJNMTk0LjQyLDc4MS4yMXYtMjI2LjI0aDQyLjUiLz4KICAgICAgPHBhdGggY2xhc3M9InN0OSIgZD0iTTIzNi45Miw1NjMuNzFsMjQtOC43NC0yNC04Ljc0djE3LjQ3WiIvPgogICAgICA8cGF0aCBjbGFzcz0ic3Q4IiBkPSJNODc2Ljk3LDc4MS4yMXYtMjI2LjI0aC03Ny45MiIvPgogICAgICA8cGF0aCBjbGFzcz0ic3QyIiBkPSJNODc2Ljk3LDc4MS4yMXYtMjI2LjI0aC00Ni4xOSIvPgogICAgICA8cGF0aCBjbGFzcz0ic3Q5IiBkPSJNODMwLjc4LDU0Ni4yNGwtMjQsOC43NCwyNCw4Ljc0di0xNy40N1oiLz4KICAgICAgPHBhdGggY2xhc3M9InN0OCIgZD0iTTM5Ny4yLDIxOS4xMnY4OC4xMWguMDl2ODguMTEiLz4KICAgICAgPHBhdGggY2xhc3M9InN0MiIgZD0iTTM5Ny4yLDI1MC44NXY1Ni4zOGguMDl2NTYuMzgiLz4KICAgICAgPHBhdGggY2xhc3M9InN0OSIgZD0iTTQwNS45MywyNTAuODVsLTguNzQtMjQtOC43NCwyNGgxNy40N1oiLz4KICAgICAgPHBhdGggY2xhc3M9InN0OSIgZD0iTTM4OC41NiwzNjMuNmw4Ljc0LDI0LDguNzQtMjRoLTE3LjQ3WiIvPgogICAgICA8cGF0aCBjbGFzcz0ic3Q4IiBkPSJNNjU0LjgyLDIxOS4xMnY4OC4xMWguMDl2ODguMTEiLz4KICAgICAgPHBhdGggY2xhc3M9InN0MiIgZD0iTTY1NC44MiwyMTkuMTJ2ODguMTFoLjA5djU2LjM4Ii8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDkiIGQ9Ik02NDYuMTgsMzYzLjZsOC43NCwyNCw4Ljc0LTI0aC0xNy40N1oiLz4KICAgICAgPHBhdGggY2xhc3M9InN0OCIgZD0iTTU2LjMxLDI1NS44MmgzMjguNTR2OTQuNzdINTYuMzF2LTk0Ljc3WiIvPgogICAgICA8cGF0aCBkPSJNMTI0LjYyLDMwMy40MXYtMjMuNTVoMTAuNDVjMi4wOSwwLDMuNjkuMjEsNC43OC42NCwxLjA5LjQyLDEuOTYsMS4xNiwyLjYxLDIuMjMuNjYsMS4wNy45OCwyLjI2Ljk4LDMuNTUsMCwxLjY4LS41NCwzLjA5LTEuNjIsNC4yM3MtMi43NSwxLjg3LTUsMi4xN2MuODIuNCwxLjQ1Ljc5LDEuODgsMS4xNy45MS44NCwxLjc3LDEuODksMi41OCwzLjE0bDQuMDksNi40MWgtMy45MWwtMy4xMi00Ljg5Yy0uOTEtMS40Mi0xLjY2LTIuNS0yLjI1LTMuMjUtLjU4LS43NS0xLjExLTEuMjgtMS41OC0xLjU4cy0uOTQtLjUxLTEuNDItLjYyYy0uMzUtLjA3LS45My0uMTEtMS43My0uMTFoLTMuNjF2MTAuNDVoLTMuMTJaTTEyNy43NCwyOTAuMjVoNi42OWMxLjQzLDAsMi41NC0uMTUsMy4zNC0uNDRzMS40MS0uNzYsMS44My0xLjQxYy40My0uNjYuNjQtMS4zNi42NC0yLjEyLDAtMS4xMS0uNDEtMi4wMy0xLjIyLTIuNzMtLjgxLS43Mi0yLjA5LTEuMDgtMy44My0xLjA4aC03LjQ1djcuNzhaTTE1OS42NCwyOTcuOTFsMi45OC4zOGMtLjQ3LDEuNzUtMS4zNCwzLjExLTIuNjIsNC4wOC0xLjI3Ljk2LTIuOSwxLjQ0LTQuODgsMS40NC0yLjQ5LDAtNC40Ny0uNzctNS45NC0yLjMtMS40Ni0xLjU0LTIuMTktMy43LTIuMTktNi40OHMuNzQtNS4wOSwyLjIyLTYuNjcsMy40LTIuMzgsNS43NS0yLjM4LDQuMTQuNzgsNS41OCwyLjMzYzEuNDUsMS41NSwyLjE3LDMuNzMsMi4xNyw2LjU1LDAsLjE4LDAsLjQ0LS4wMi43OGgtMTIuNzJjLjExLDEuODYuNjUsMy4zLDEuNTksNC4zczIuMTQsMS41LDMuNTYsMS41YzEuMDYsMCwxLjk3LS4yOCwyLjcyLS44My43NS0uNTYsMS4zNC0xLjQ2LDEuNzgtMi42OVpNMTUwLjE1LDI5My4yNGg5LjUyYy0uMTItMS40My0uNDktMi41LTEuMDktMy4yMi0uOTItMS4xMS0yLjExLTEuNjctMy41OC0xLjY3LTEuMzMsMC0yLjQ1LjQ1LTMuMzYsMS4zNC0uOS44OS0xLjM5LDIuMDctMS40OCwzLjU1Wk0xNzIuNTcsMzAwLjgzbC40MSwyLjU1Yy0uODEuMTctMS41NC4yNS0yLjE3LjI1LTEuMDUsMC0xLjg3LS4xNi0yLjQ1LS40OC0uNTctLjMzLS45OC0uNzctMS4yMi0xLjMxLS4yMy0uNTQtLjM0LTEuNjgtLjM0LTMuNDJ2LTkuODFoLTIuMTJ2LTIuMjVoMi4xMnYtNC4yMmwyLjg4LTEuNzN2NS45NWgyLjkxdjIuMjVoLTIuOTF2OS45OGMwLC44Mi4wNSwxLjM1LjE0LDEuNTkuMS4yMy4yNy40Mi41LjU2LjIzLjE0LjU2LjIuOTguMi4zMiwwLC43NS0uMDQsMS4yOC0uMTFaTTE3NS4zNiwzMDMuNDF2LTE3LjA2aDIuNTl2Mi41OWMuNjctMS4yMSwxLjI4LTIuMDEsMS44NC0yLjM5czEuMTgtLjU4LDEuODYtLjU4Yy45NywwLDEuOTYuMzEsMi45Ny45MmwtMSwyLjY5Yy0uNzEtLjQyLTEuNDItLjYyLTIuMTItLjYyLS42MiwwLTEuMTkuMTktMS43LjU4LS41LjM4LS44NS45LTEuMDYsMS41OC0uMzIsMS4wMi0uNDgsMi4xNS0uNDgsMy4zOHY4LjkyaC0yLjg5Wk0xODYuMzYsMjgzLjE5di0zLjMzaDIuODl2My4zM2gtMi44OVpNMTg2LjM2LDMwMy40MXYtMTcuMDZoMi44OXYxNy4wNmgtMi44OVpNMjA1LjMzLDI5Ny45MWwyLjk4LjM4Yy0uNDcsMS43NS0xLjM0LDMuMTEtMi42Miw0LjA4LTEuMjcuOTYtMi45LDEuNDQtNC44OCwxLjQ0LTIuNDksMC00LjQ3LS43Ny01Ljk0LTIuMy0xLjQ2LTEuNTQtMi4xOS0zLjctMi4xOS02LjQ4LDAtMi44Ni43NC01LjA5LDIuMjItNi42NywxLjQ4LTEuNTgsMy40LTIuMzgsNS43NS0yLjM4czQuMTQuNzgsNS41OCwyLjMzYzEuNDUsMS41NSwyLjE3LDMuNzMsMi4xNyw2LjU1LDAsLjE4LDAsLjQ0LS4wMi43OGgtMTIuNzJjLjExLDEuODYuNjUsMy4zLDEuNTksNC4zLjk1LDEsMi4xNCwxLjUsMy41NiwxLjUsMS4wNiwwLDEuOTctLjI4LDIuNzItLjgzLjc1LS41NiwxLjM0LTEuNDYsMS43OC0yLjY5Wk0xOTUuODQsMjkzLjI0aDkuNTJjLS4xMi0xLjQzLS40OS0yLjUtMS4wOS0zLjIyLS45Mi0xLjExLTIuMTEtMS42Ny0zLjU4LTEuNjctMS4zMywwLTIuNDUuNDUtMy4zNiwxLjM0LS45Ljg5LTEuMzksMi4wNy0xLjQ4LDMuNTVaTTIxNi42OCwzMDMuNDFsLTYuNDgtMTcuMDZoMy4wNWwzLjY2LDEwLjIyYy40LDEuMS43NiwyLjI1LDEuMDksMy40NC4yNi0uOS42Mi0xLjk4LDEuMDgtMy4yNWwzLjgtMTAuNDFoMi45N2wtNi40NSwxNy4wNmgtMi43Wk0yNDAuMDcsMjk3LjkxbDIuOTguMzhjLS40NywxLjc1LTEuMzQsMy4xMS0yLjYyLDQuMDgtMS4yNy45Ni0yLjksMS40NC00Ljg4LDEuNDQtMi40OSwwLTQuNDctLjc3LTUuOTQtMi4zLTEuNDYtMS41NC0yLjE5LTMuNy0yLjE5LTYuNDhzLjc0LTUuMDksMi4yMi02LjY3LDMuNC0yLjM4LDUuNzUtMi4zOCw0LjE0Ljc4LDUuNTgsMi4zM2MxLjQ1LDEuNTUsMi4xNywzLjczLDIuMTcsNi41NSwwLC4xOCwwLC40NC0uMDIuNzhoLTEyLjcyYy4xMSwxLjg2LjY1LDMuMywxLjU5LDQuM3MyLjE0LDEuNSwzLjU2LDEuNWMxLjA2LDAsMS45Ny0uMjgsMi43Mi0uODMuNzUtLjU2LDEuMzQtMS40NiwxLjc4LTIuNjlaTTIzMC41OCwyOTMuMjRoOS41MmMtLjEyLTEuNDMtLjQ5LTIuNS0xLjA5LTMuMjItLjkyLTEuMTEtMi4xMS0xLjY3LTMuNTgtMS42Ny0xLjMzLDAtMi40NS40NS0zLjM2LDEuMzQtLjkuODktMS4zOSwyLjA3LTEuNDgsMy41NVpNMjU2LjUxLDMwMy40MXYtMTQuODFoLTIuNTV2LTIuMjVoMi41NXYtMS44MWMwLTEuMTUuMS0xLjk5LjMtMi41NS4yOC0uNzUuNzctMS4zNSwxLjQ3LTEuODEuNzEtLjQ3LDEuNjktLjcsMi45NS0uNy44MSwwLDEuNzEuMDksMi43LjI4bC0uNDQsMi41MmMtLjU5LS4xLTEuMTYtLjE2LTEuNy0uMTYtLjg4LDAtMS40OS4xOS0xLjg2LjU2cy0uNTUsMS4wOC0uNTUsMi4xMXYxLjU2aDMuMzN2Mi4yNWgtMy4zM3YxNC44MWgtMi44OFpNMjc2LjEzLDMwMy40MXYtMi41Yy0xLjMyLDEuOTMtMy4xMiwyLjg5LTUuNDEsMi44OS0xLjAxLDAtMS45NS0uMTktMi44My0uNTgtLjg2LS4zOS0xLjUxLS44Ny0xLjk0LTEuNDVzLS43Mi0xLjMtLjg5LTIuMTZjLS4xMS0uNTYtLjE3LTEuNDYtLjE3LTIuNjl2LTEwLjU4aDIuODl2OS40N2MwLDEuNTEuMDYsMi41My4xNywzLjA1LjE4Ljc2LjU2LDEuMzYsMS4xNCwxLjguNTkuNDMsMS4zMy42NCwyLjIuNjRzMS42OC0uMjIsMi40NC0uNjZjLjc2LS40NSwxLjMtMS4wNSwxLjYxLTEuODEuMzItLjc3LjQ4LTEuODkuNDgtMy4zNHYtOS4xNGgyLjg5djE3LjA2aC0yLjU5Wk0yODMuMjUsMzAzLjQxdi0xNy4wNmgyLjU5djIuNDRjMS4yNi0xLjg4LDMuMDctMi44MSw1LjQ0LTIuODEsMS4wMiwwLDEuOTYuMTksMi44My41Ni44Ni4zNiwxLjUxLjg1LDEuOTQsMS40NS40My41OS43MiwxLjMuODksMi4xMi4xMS41My4xNywxLjQ3LjE3LDIuODF2MTAuNDhoLTIuODl2LTEwLjM4YzAtMS4xOC0uMTEtMi4wNi0uMzQtMi42NC0uMjItLjU4LS42MS0xLjA1LTEuMTktMS4zOS0uNTctLjM1LTEuMjQtLjUzLTIuMDItLjUzLTEuMjQsMC0yLjMxLjM5LTMuMiwxLjE3LS44OS43OC0xLjMzLDIuMjctMS4zMyw0LjQ1djkuMzFoLTIuODlaTTMxMi42NywyOTcuMTZsMi44NC4zOGMtLjMxLDEuOTYtMS4xMSwzLjQ5LTIuMzksNC42MS0xLjI3LDEuMS0yLjg0LDEuNjYtNC43LDEuNjYtMi4zMywwLTQuMjEtLjc2LTUuNjQtMi4yOC0xLjQyLTEuNTMtMi4xMi0zLjcyLTIuMTItNi41OCwwLTEuODMuMy0zLjQ0LjkxLTQuODMuNjEtMS4zOSwxLjU1LTIuNDIsMi44LTMuMTFzMi42MS0xLjAzLDQuMDgtMS4wM2MxLjg1LDAsMy4zNy40Nyw0LjU1LDEuNDFzMS45MywyLjI3LDIuMjUsMy45OGwtMi44LjQ0Yy0uMjctMS4xNS0uNzUtMi4wMS0xLjQ0LTIuNTgtLjY4LS41OC0xLjQ5LS44OC0yLjQ1LS44OC0xLjQ2LDAtMi42NS41Mi0zLjU2LDEuNTYtLjkxLDEuMDQtMS4zNiwyLjY5LTEuMzYsNC45NXMuNDQsMy45NiwxLjMxLDVjLjg5LDEuMDQsMi4wNCwxLjU2LDMuNDUsMS41NiwxLjE0LDAsMi4wOC0uMzUsMi44NC0xLjA1czEuMjQtMS43NywxLjQ0LTMuMjJaTTMyNC4zLDMwMC44M2wuNDEsMi41NWMtLjgxLjE3LTEuNTQuMjUtMi4xNy4yNS0xLjA1LDAtMS44Ny0uMTYtMi40NS0uNDgtLjU3LS4zMy0uOTgtLjc3LTEuMjItMS4zMS0uMjMtLjU0LS4zNC0xLjY4LS4zNC0zLjQydi05LjgxaC0yLjEydi0yLjI1aDIuMTJ2LTQuMjJsMi44OC0xLjczdjUuOTVoMi45MXYyLjI1aC0yLjkxdjkuOThjMCwuODIuMDUsMS4zNS4xNCwxLjU5LjEuMjMuMjcuNDIuNS41Ni4yMy4xNC41Ni4yLjk4LjIuMzIsMCwuNzUtLjA0LDEuMjgtLjExWk0zMjcuMTUsMjgzLjE5di0zLjMzaDIuODl2My4zM2gtMi44OVpNMzI3LjE1LDMwMy40MXYtMTcuMDZoMi44OXYxNy4wNmgtMi44OVpNMzMzLjM2LDI5NC44OGMwLTMuMTYuODgtNS40OSwyLjYyLTcuMDIsMS40Ny0xLjI2LDMuMjYtMS44OSw1LjM4LTEuODksMi4zNCwwLDQuMjYuNzcsNS43NSwyLjMxLDEuNDksMS41MywyLjIzLDMuNjUsMi4yMyw2LjM2LDAsMi4yLS4zMywzLjkzLTEsNS4xOS0uNjYsMS4yNS0xLjYxLDIuMjItMi44OCwyLjkyLTEuMjUuNy0yLjYyLDEuMDUtNC4xMSwxLjA1LTIuMzksMC00LjMyLS43Ny01LjgtMi4zLTEuNDctMS41My0yLjItMy43NC0yLjItNi42MlpNMzM2LjMzLDI5NC44OGMwLDIuMTkuNDcsMy44MywxLjQyLDQuOTIuOTYsMS4wOCwyLjE2LDEuNjIsMy42MSwxLjYyczIuNjEtLjU1LDMuNTYtMS42NGMuOTYtMS4wOSwxLjQ0LTIuNzYsMS40NC01LDAtMi4xLS40OC0zLjctMS40NC00Ljc4LS45Ni0xLjA5LTIuMTUtMS42NC0zLjU2LTEuNjRzLTIuNjUuNTQtMy42MSwxLjYyYy0uOTUsMS4wOC0xLjQyLDIuNzEtMS40Miw0Ljg5Wk0zNTIuNzMsMzAzLjQxdi0xNy4wNmgyLjU5djIuNDRjMS4yNi0xLjg4LDMuMDctMi44MSw1LjQ0LTIuODEsMS4wMiwwLDEuOTYuMTksMi44My41Ni44Ni4zNiwxLjUxLjg1LDEuOTQsMS40NS40My41OS43MiwxLjMuODksMi4xMi4xMS41My4xNywxLjQ3LjE3LDIuODF2MTAuNDhoLTIuODl2LTEwLjM4YzAtMS4xOC0uMTEtMi4wNi0uMzQtMi42NC0uMjItLjU4LS42MS0xLjA1LTEuMTktMS4zOS0uNTctLjM1LTEuMjQtLjUzLTIuMDItLjUzLTEuMjQsMC0yLjMxLjM5LTMuMiwxLjE3LS44OS43OC0xLjMzLDIuMjctMS4zMyw0LjQ1djkuMzFoLTIuODlaIi8+CiAgICAgIDxwYXRoIGQ9Ik0yMzMuODksMzQyLjg5di0xNy4wNmgyLjU4djIuNDFjLjU0LS44NCwxLjI2LTEuNTIsMi4xNC0yLjAyLjg5LS41MSwxLjktLjc3LDMuMDMtLjc3LDEuMjYsMCwyLjMuMjcsMy4xMS44LjgxLjUyLDEuMzksMS4yNSwxLjcyLDIuMTksMS4zNC0xLjk5LDMuMS0yLjk4LDUuMjctMi45OCwxLjY5LDAsMi45OC40NywzLjg5LDEuNDEuOTIuOTQsMS4zOCwyLjM4LDEuMzgsNC4zM3YxMS43aC0yLjg4di0xMC43NWMwLTEuMTYtLjA5LTEuOTgtLjI4LTIuNDgtLjE5LS41MS0uNTMtLjkyLTEuMDMtMS4yMy0uNDktLjMxLTEuMDYtLjQ3LTEuNzItLjQ3LTEuMjEsMC0yLjIxLjQtMywxLjItLjc5Ljc5LTEuMTksMi4wNy0xLjE5LDMuODN2OS45MWgtMi44OXYtMTEuMDhjMC0xLjI5LS4yMy0yLjI2LS43LTIuODktLjQ3LS42NS0xLjI0LS45Ny0yLjMxLS45Ny0uODEsMC0xLjU3LjIxLTIuMjcuNjQtLjY5LjQzLTEuMTksMS4wNi0xLjUsMS44OS0uMy44Mi0uNDUsMi4wMS0uNDUsMy41NnY4Ljg0aC0yLjg5Wk0yNzIuOTYsMzM3LjM5bDIuOTguMzhjLS40NywxLjc1LTEuMzQsMy4xMS0yLjYyLDQuMDgtMS4yNy45Ni0yLjksMS40NC00Ljg4LDEuNDQtMi40OSwwLTQuNDctLjc3LTUuOTQtMi4zLTEuNDYtMS41NC0yLjE5LTMuNy0yLjE5LTYuNDhzLjc0LTUuMDksMi4yMi02LjY3YzEuNDgtMS41OCwzLjQtMi4zOCw1Ljc1LTIuMzhzNC4xNC43OCw1LjU4LDIuMzNjMS40NSwxLjU1LDIuMTcsMy43MywyLjE3LDYuNTUsMCwuMTgsMCwuNDQtLjAyLjc4aC0xMi43MmMuMTEsMS44Ni42NSwzLjMsMS41OSw0LjMuOTUsMSwyLjE0LDEuNSwzLjU2LDEuNSwxLjA2LDAsMS45Ny0uMjgsMi43Mi0uODMuNzUtLjU2LDEuMzQtMS40NiwxLjc4LTIuNjlaTTI2My40NywzMzIuNzJoOS41MmMtLjEyLTEuNDMtLjQ5LTIuNS0xLjA5LTMuMjItLjkyLTEuMTEtMi4xMS0xLjY3LTMuNTgtMS42Ny0xLjMzLDAtMi40NS40NS0zLjM2LDEuMzQtLjkuODktMS4zOSwyLjA3LTEuNDgsMy41NVpNMjg1Ljg5LDM0MC4zMWwuNDEsMi41NWMtLjgxLjE3LTEuNTQuMjUtMi4xNy4yNS0xLjA1LDAtMS44Ny0uMTYtMi40NS0uNDgtLjU3LS4zMy0uOTgtLjc3LTEuMjItMS4zMS0uMjMtLjU0LS4zNC0xLjY4LS4zNC0zLjQydi05LjgxaC0yLjEydi0yLjI1aDIuMTJ2LTQuMjJsMi44OC0xLjczdjUuOTVoMi45MXYyLjI1aC0yLjkxdjkuOThjMCwuODIuMDUsMS4zNS4xNCwxLjU5LjEuMjMuMjcuNDIuNS41Ni4yMy4xNC41Ni4yLjk4LjIuMzIsMCwuNzUtLjA0LDEuMjgtLjExWk0yOTkuODQsMzQwLjc4Yy0xLjA3LjkyLTIuMSwxLjU2LTMuMDksMS45NC0uOTkuMzgtMi4wNS41Ni0zLjE5LjU2LTEuODgsMC0zLjMyLS40Ni00LjMzLTEuMzgtMS0uOTItMS41LTIuMDktMS41LTMuNTIsMC0uODMuMTktMS41OS41Ni0yLjI4LjM5LS43Ljg5LTEuMjYsMS41LTEuNjdzMS4zMS0uNzMsMi4wOC0uOTRjLjU3LS4xNiwxLjQzLS4zLDIuNTgtLjQ0LDIuMzMtLjI4LDQuMDUtLjYxLDUuMTYtMSwuMDEtLjQuMDItLjY1LjAyLS43NSwwLTEuMTgtLjI4LTIuMDEtLjgzLTIuNDgtLjc0LS42Ni0xLjgzLS45OC0zLjI4LS45OC0xLjM2LDAtMi4zNy4yNC0zLjAyLjcyLS42NS40Ny0xLjEyLDEuMzEtMS40NCwyLjUzbC0yLjgzLS4zOWMuMjYtMS4yMS42OC0yLjE4LDEuMjctMi45Mi41OS0uNzUsMS40NC0xLjMyLDIuNTUtMS43MiwxLjExLS40MSwyLjQxLS42MSwzLjg4LS42MXMyLjY0LjE3LDMuNTUuNTJjLjkyLjM0LDEuNTkuNzgsMi4wMiwxLjMuNDMuNTEuNzIsMS4xNi44OSwxLjk1LjEuNS4xNiwxLjM5LjE2LDIuNjd2My44NmMwLDIuNjkuMDYsNC4zOS4xNyw1LjA5LjEyLjcxLjM3LDEuMzkuNzMsMi4wNWgtMy4wMmMtLjMtLjYtLjQ5LTEuMzEtLjU4LTIuMTFaTTI5OS42MSwzMzQuMzNjLTEuMDUuNDMtMi42My43OS00LjczLDEuMDktMS4xOS4xOC0yLjAzLjM4LTIuNTIuNTktLjQ5LjIxLS44Ny41Mi0xLjE0Ljk0LS4yNy40MS0uNDEuODYtLjQxLDEuMzYsMCwuNzcuMjksMS40Mi44OCwxLjk0LjU4LjUxLDEuNDQuNzcsMi41Ni43N3MyLjEtLjI0LDIuOTctLjczYy44OC0uNDksMS41Mi0xLjE2LDEuOTItMiwuMzEtLjY2LjQ3LTEuNjIuNDctMi44OXYtMS4wNlpNMzE4LjA3LDM0Mi44OXYtMi4xNmMtMS4wOCwxLjctMi42NywyLjU1LTQuNzcsMi41NS0xLjM2LDAtMi42Mi0uMzctMy43Ny0xLjEyLTEuMTQtLjc1LTIuMDItMS44LTIuNjQtMy4xNHMtLjk0LTIuODktLjk0LTQuNjQuMjgtMy4yNC44NC00LjYyYy41Ny0xLjM5LDEuNDMtMi40NSwyLjU2LTMuMTksMS4xNC0uNzQsMi40LTEuMTEsMy44LTEuMTEsMS4wMywwLDEuOTUuMjIsMi43NS42Ni44LjQzLDEuNDYuOTksMS45NywxLjY5di04LjQ1aDIuODh2MjMuNTVoLTIuNjlaTTMwOC45MywzMzQuMzhjMCwyLjE5LjQ2LDMuODIsMS4zOCw0LjkxLjkzLDEuMDgsMi4wMiwxLjYyLDMuMjcsMS42MnMyLjMzLS41MiwzLjIyLTEuNTVjLjg5LTEuMDQsMS4zMy0yLjYyLDEuMzMtNC43MywwLTIuMzMtLjQ1LTQuMDUtMS4zNi01LjE0LS45LTEuMDktMi0xLjY0LTMuMzEtMS42NHMtMi4zNS41My0zLjIyLDEuNThjLS44NiwxLjA0LTEuMywyLjY5LTEuMyw0Ljk1Wk0zMzYuNDIsMzQwLjc4Yy0xLjA3LjkyLTIuMSwxLjU2LTMuMDksMS45NC0uOTkuMzgtMi4wNS41Ni0zLjE5LjU2LTEuODgsMC0zLjMyLS40Ni00LjMzLTEuMzgtMS0uOTItMS41LTIuMDktMS41LTMuNTIsMC0uODMuMTktMS41OS41Ni0yLjI4LjM5LS43Ljg5LTEuMjYsMS41LTEuNjdzMS4zMS0uNzMsMi4wOC0uOTRjLjU3LS4xNiwxLjQzLS4zLDIuNTgtLjQ0LDIuMzMtLjI4LDQuMDUtLjYxLDUuMTYtMSwuMDEtLjQuMDItLjY1LjAyLS43NSwwLTEuMTgtLjI4LTIuMDEtLjgzLTIuNDgtLjc0LS42Ni0xLjgzLS45OC0zLjI4LS45OC0xLjM2LDAtMi4zNy4yNC0zLjAyLjcyLS42NS40Ny0xLjEyLDEuMzEtMS40NCwyLjUzbC0yLjgzLS4zOWMuMjYtMS4yMS42OC0yLjE4LDEuMjctMi45Mi41OS0uNzUsMS40NC0xLjMyLDIuNTUtMS43MiwxLjExLS40MSwyLjQxLS42MSwzLjg4LS42MXMyLjY0LjE3LDMuNTUuNTJjLjkyLjM0LDEuNTkuNzgsMi4wMiwxLjMuNDMuNTEuNzIsMS4xNi44OSwxLjk1LjEuNS4xNiwxLjM5LjE2LDIuNjd2My44NmMwLDIuNjkuMDYsNC4zOS4xNyw1LjA5LjEyLjcxLjM3LDEuMzkuNzMsMi4wNWgtMy4wMmMtLjMtLjYtLjQ5LTEuMzEtLjU4LTIuMTFaTTMzNi4xOSwzMzQuMzNjLTEuMDUuNDMtMi42My43OS00LjczLDEuMDktMS4xOS4xOC0yLjAzLjM4LTIuNTIuNTktLjQ5LjIxLS44Ny41Mi0xLjE0Ljk0LS4yNy40MS0uNDEuODYtLjQxLDEuMzYsMCwuNzcuMjksMS40Mi44OCwxLjk0LjU4LjUxLDEuNDQuNzcsMi41Ni43N3MyLjEtLjI0LDIuOTctLjczYy44OC0uNDksMS41Mi0xLjE2LDEuOTItMiwuMzEtLjY2LjQ3LTEuNjIuNDctMi44OXYtMS4wNlpNMzQ5LjksMzQwLjMxbC40MSwyLjU1Yy0uODEuMTctMS41NC4yNS0yLjE3LjI1LTEuMDUsMC0xLjg3LS4xNi0yLjQ1LS40OC0uNTctLjMzLS45OC0uNzctMS4yMi0xLjMxLS4yMy0uNTQtLjM0LTEuNjgtLjM0LTMuNDJ2LTkuODFoLTIuMTJ2LTIuMjVoMi4xMnYtNC4yMmwyLjg4LTEuNzN2NS45NWgyLjkxdjIuMjVoLTIuOTF2OS45OGMwLC44Mi4wNSwxLjM1LjE0LDEuNTkuMS4yMy4yNy40Mi41LjU2LjIzLjE0LjU2LjIuOTguMi4zMiwwLC43NS0uMDQsMS4yOC0uMTFaTTM2My44NSwzNDAuNzhjLTEuMDcuOTItMi4xLDEuNTYtMy4wOSwxLjk0LS45OS4zOC0yLjA1LjU2LTMuMTkuNTYtMS44OCwwLTMuMzItLjQ2LTQuMzMtMS4zOC0xLS45Mi0xLjUtMi4wOS0xLjUtMy41MiwwLS44My4xOS0xLjU5LjU2LTIuMjguMzktLjcuODktMS4yNiwxLjUtMS42Ny42MS0uNDIsMS4zMS0uNzMsMi4wOC0uOTQuNTctLjE2LDEuNDMtLjMsMi41OC0uNDQsMi4zMy0uMjgsNC4wNS0uNjEsNS4xNi0xLC4wMS0uNC4wMi0uNjUuMDItLjc1LDAtMS4xOC0uMjgtMi4wMS0uODMtMi40OC0uNzQtLjY2LTEuODMtLjk4LTMuMjgtLjk4LTEuMzYsMC0yLjM3LjI0LTMuMDIuNzItLjY1LjQ3LTEuMTMsMS4zMS0xLjQ0LDIuNTNsLTIuODMtLjM5Yy4yNi0xLjIxLjY4LTIuMTgsMS4yNy0yLjkyLjU5LS43NSwxLjQ0LTEuMzIsMi41NS0xLjcyLDEuMTEtLjQxLDIuNDEtLjYxLDMuODgtLjYxczIuNjQuMTcsMy41NS41MmMuOTIuMzQsMS41OS43OCwyLjAyLDEuMy40My41MS43MiwxLjE2Ljg5LDEuOTUuMS41LjE2LDEuMzkuMTYsMi42N3YzLjg2YzAsMi42OS4wNiw0LjM5LjE3LDUuMDkuMTIuNzEuMzcsMS4zOS43MywyLjA1aC0zLjAyYy0uMy0uNi0uNDktMS4zMS0uNTgtMi4xMVpNMzYzLjYyLDMzNC4zM2MtMS4wNS40My0yLjYzLjc5LTQuNzMsMS4wOS0xLjE5LjE4LTIuMDMuMzgtMi41Mi41OS0uNDkuMjEtLjg3LjUyLTEuMTQuOTQtLjI3LjQxLS40MS44Ni0uNDEsMS4zNiwwLC43Ny4yOSwxLjQyLjg4LDEuOTQuNTguNTEsMS40NC43NywyLjU2Ljc3czIuMS0uMjQsMi45Ny0uNzNjLjg3LS40OSwxLjUyLTEuMTYsMS45Mi0yLC4zMS0uNjYuNDctMS42Mi40Ny0yLjg5di0xLjA2WiIvPgogICAgICA8cGF0aCBjbGFzcz0ic3Q4IiBkPSJNNjU0LjgyLDI1Ny4zM2gzMjguNTR2OTQuNzdoLTMyOC41NHYtOTQuNzdaIi8+CiAgICAgIDxwYXRoIGQ9Ik02NzMuNDMsMzA0Ljkydi0yMy41NWgxNy4wMnYyLjc4aC0xMy45MXY3LjIyaDEzLjAydjIuNzVoLTEzLjAydjguMDJoMTQuNDV2Mi43OGgtMTcuNTZaTTY5Mi45OSwzMDQuOTJsNi4yMy04Ljg2LTUuNzctOC4yaDMuNjFsMi42Miw0Yy40OS43Ni44OSwxLjQsMS4xOSwxLjkyLjQ3LS43MS45LTEuMzQsMS4zLTEuODlsMi44OC00LjAzaDMuNDVsLTUuODksOC4wMyw2LjM0LDkuMDNoLTMuNTVsLTMuNS01LjMtLjk0LTEuNDQtNC40OCw2LjczaC0zLjVaTTcyMy4wNCwyOTkuNDJsMi45OC4zOGMtLjQ3LDEuNzUtMS4zNCwzLjExLTIuNjIsNC4wOC0xLjI3Ljk2LTIuOSwxLjQ0LTQuODgsMS40NC0yLjQ5LDAtNC40Ny0uNzctNS45NC0yLjMtMS40Ni0xLjU0LTIuMTktMy43LTIuMTktNi40OHMuNzQtNS4wOSwyLjIyLTYuNjdjMS40OC0xLjU4LDMuNC0yLjM4LDUuNzUtMi4zOHM0LjE0Ljc4LDUuNTgsMi4zM2MxLjQ1LDEuNTUsMi4xNywzLjczLDIuMTcsNi41NSwwLC4xOCwwLC40NC0uMDIuNzhoLTEyLjcyYy4xMSwxLjg2LjY1LDMuMywxLjU5LDQuMy45NSwxLDIuMTQsMS41LDMuNTYsMS41LDEuMDYsMCwxLjk3LS4yOCwyLjcyLS44My43NS0uNTYsMS4zNC0xLjQ2LDEuNzgtMi42OVpNNzEzLjU2LDI5NC43NWg5LjUyYy0uMTItMS40My0uNDktMi41LTEuMDktMy4yMi0uOTItMS4xMS0yLjExLTEuNjctMy41OC0xLjY3LTEuMzMsMC0yLjQ1LjQ1LTMuMzYsMS4zNC0uOS44OS0xLjM5LDIuMDctMS40OCwzLjU1Wk03NDAuNzksMjk4LjY3bDIuODQuMzhjLS4zMSwxLjk2LTEuMTEsMy40OS0yLjM5LDQuNjEtMS4yNywxLjEtMi44NCwxLjY2LTQuNywxLjY2LTIuMzMsMC00LjIxLS43Ni01LjY0LTIuMjgtMS40Mi0xLjUzLTIuMTItMy43Mi0yLjEyLTYuNTgsMC0xLjgzLjMtMy40NC45MS00LjgzLjYxLTEuMzksMS41NS0yLjQyLDIuOC0zLjExLDEuMjUtLjY5LDIuNjEtMS4wMyw0LjA4LTEuMDMsMS44NSwwLDMuMzcuNDcsNC41NSwxLjQxLDEuMTguOTQsMS45MywyLjI3LDIuMjUsMy45OGwtMi44LjQ0Yy0uMjctMS4xNS0uNzUtMi4wMS0xLjQ0LTIuNTgtLjY4LS41OC0xLjQ5LS44OC0yLjQ1LS44OC0xLjQ2LDAtMi42NS41Mi0zLjU2LDEuNTYtLjkxLDEuMDQtMS4zNiwyLjY5LTEuMzYsNC45NSwwLDIuMjkuNDQsMy45NiwxLjMxLDUsLjg5LDEuMDQsMi4wNCwxLjU2LDMuNDUsMS41NiwxLjE0LDAsMi4wOC0uMzUsMi44NC0xLjA1Ljc2LS43LDEuMjQtMS43NywxLjQ0LTMuMjJaTTc1Ny4yOCwzMDQuOTJ2LTIuNWMtMS4zMiwxLjkzLTMuMTIsMi44OS01LjQxLDIuODktMS4wMSwwLTEuOTUtLjE5LTIuODMtLjU4LS44Ni0uMzktMS41MS0uODctMS45NC0xLjQ1LS40My0uNTgtLjcyLTEuMy0uODktMi4xNi0uMTEtLjU2LS4xNy0xLjQ2LS4xNy0yLjY5di0xMC41OGgyLjg5djkuNDdjMCwxLjUxLjA2LDIuNTMuMTcsMy4wNS4xOC43Ni41NiwxLjM2LDEuMTQsMS44LjU5LjQzLDEuMzMuNjQsMi4yLjY0czEuNjgtLjIyLDIuNDQtLjY2Yy43Ni0uNDUsMS4zLTEuMDUsMS42MS0xLjgxLjMyLS43Ny40OC0xLjg5LjQ4LTMuMzR2LTkuMTRoMi44OXYxNy4wNmgtMi41OVpNNzcwLjcxLDMwMi4zNGwuNDEsMi41NWMtLjgxLjE3LTEuNTQuMjUtMi4xNy4yNS0xLjA1LDAtMS44Ny0uMTYtMi40NS0uNDgtLjU3LS4zMy0uOTgtLjc3LTEuMjItMS4zMS0uMjMtLjU0LS4zNC0xLjY4LS4zNC0zLjQydi05LjgxaC0yLjEydi0yLjI1aDIuMTJ2LTQuMjJsMi44OC0xLjczdjUuOTVoMi45MXYyLjI1aC0yLjkxdjkuOThjMCwuODIuMDUsMS4zNS4xNCwxLjU5LjEuMjMuMjcuNDIuNS41Ni4yMy4xNC41Ni4yLjk4LjIuMzIsMCwuNzUtLjA0LDEuMjgtLjExWk03ODUuMjEsMjk5LjQybDIuOTguMzhjLS40NywxLjc1LTEuMzQsMy4xMS0yLjYyLDQuMDgtMS4yNy45Ni0yLjksMS40NC00Ljg4LDEuNDQtMi40OSwwLTQuNDctLjc3LTUuOTQtMi4zLTEuNDYtMS41NC0yLjE5LTMuNy0yLjE5LTYuNDhzLjc0LTUuMDksMi4yMi02LjY3YzEuNDgtMS41OCwzLjQtMi4zOCw1Ljc1LTIuMzhzNC4xNC43OCw1LjU4LDIuMzNjMS40NSwxLjU1LDIuMTcsMy43MywyLjE3LDYuNTUsMCwuMTgsMCwuNDQtLjAyLjc4aC0xMi43MmMuMTEsMS44Ni42NSwzLjMsMS41OSw0LjNzMi4xNCwxLjUsMy41NiwxLjVjMS4wNiwwLDEuOTctLjI4LDIuNzItLjgzLjc1LS41NiwxLjM0LTEuNDYsMS43OC0yLjY5Wk03NzUuNzMsMjk0Ljc1aDkuNTJjLS4xMi0xLjQzLS40OS0yLjUtMS4wOS0zLjIyLS45Mi0xLjExLTIuMTEtMS42Ny0zLjU4LTEuNjctMS4zMywwLTIuNDUuNDUtMy4zNiwxLjM0LS45Ljg5LTEuMzksMi4wNy0xLjQ4LDMuNTVaTTgwNy4yOCwzMDIuMzRsLjQxLDIuNTVjLS44MS4xNy0xLjU0LjI1LTIuMTcuMjUtMS4wNSwwLTEuODctLjE2LTIuNDUtLjQ4LS41Ny0uMzMtLjk4LS43Ny0xLjIyLTEuMzEtLjIzLS41NC0uMzQtMS42OC0uMzQtMy40MnYtOS44MWgtMi4xMnYtMi4yNWgyLjEydi00LjIybDIuODgtMS43M3Y1Ljk1aDIuOTF2Mi4yNWgtMi45MXY5Ljk4YzAsLjgyLjA1LDEuMzUuMTQsMS41OS4xLjIzLjI3LjQyLjUuNTYuMjMuMTQuNTYuMi45OC4yLjMyLDAsLjc1LS4wNCwxLjI4LS4xMVpNODEwLjExLDMwNC45MnYtMjMuNTVoMi44OXY4LjQ1YzEuMzQtMS41NiwzLjA1LTIuMzQsNS4xMS0yLjM0LDEuMjYsMCwyLjM1LjI1LDMuMjguNzUuOTQuNDksMS42LDEuMTgsMiwyLjA2LjQxLjg4LjYxLDIuMTUuNjEsMy44MXYxMC44MWgtMi44OXYtMTAuODFjMC0xLjQ0LS4zMS0yLjQ4LS45NC0zLjE0LS42Mi0uNjctMS41MS0xLTIuNjYtMS0uODYsMC0xLjY4LjIyLTIuNDQuNjctLjc1LjQ0LTEuMjksMS4wNC0xLjYxLDEuOC0uMzEuNzYtLjQ3LDEuODEtLjQ3LDMuMTZ2OS4zM2gtMi44OVpNODQwLjA3LDI5OS40MmwyLjk4LjM4Yy0uNDcsMS43NS0xLjM0LDMuMTEtMi42Miw0LjA4LTEuMjcuOTYtMi45LDEuNDQtNC44OCwxLjQ0LTIuNDksMC00LjQ3LS43Ny01Ljk0LTIuMy0xLjQ2LTEuNTQtMi4xOS0zLjctMi4xOS02LjQ4cy43NC01LjA5LDIuMjItNi42N2MxLjQ4LTEuNTgsMy40LTIuMzgsNS43NS0yLjM4czQuMTQuNzgsNS41OCwyLjMzYzEuNDUsMS41NSwyLjE3LDMuNzMsMi4xNyw2LjU1LDAsLjE4LDAsLjQ0LS4wMi43OGgtMTIuNzJjLjExLDEuODYuNjUsMy4zLDEuNTksNC4zLjk1LDEsMi4xNCwxLjUsMy41NiwxLjUsMS4wNiwwLDEuOTctLjI4LDIuNzItLjgzLjc1LS41NiwxLjM0LTEuNDYsMS43OC0yLjY5Wk04MzAuNTksMjk0Ljc1aDkuNTJjLS4xMi0xLjQzLS40OS0yLjUtMS4wOS0zLjIyLS45Mi0xLjExLTIuMTEtMS42Ny0zLjU4LTEuNjctMS4zMywwLTIuNDUuNDUtMy4zNiwxLjM0LS45Ljg5LTEuMzksMi4wNy0xLjQ4LDMuNTVaIi8+CiAgICAgIDxwYXRoIGQ9Ik02NzMuNjgsMzQ0LjR2LTE0LjgxaC0yLjU1di0yLjI1aDIuNTV2LTEuODFjMC0xLjE1LjEtMS45OS4zLTIuNTUuMjgtLjc1Ljc3LTEuMzUsMS40Ny0xLjgxLjcxLS40NywxLjY5LS43LDIuOTUtLjcuODEsMCwxLjcxLjA5LDIuNy4yOGwtLjQ0LDIuNTJjLS41OS0uMS0xLjE2LS4xNi0xLjctLjE2LS44OCwwLTEuNDkuMTktMS44Ni41NnMtLjU1LDEuMDgtLjU1LDIuMTF2MS41NmgzLjMzdjIuMjVoLTMuMzN2MTQuODFoLTIuODhaTTY5My4zLDM0NC40di0yLjVjLTEuMzIsMS45My0zLjEyLDIuODktNS40MSwyLjg5LTEuMDEsMC0xLjk1LS4xOS0yLjgzLS41OC0uODYtLjM5LTEuNTEtLjg3LTEuOTQtMS40NS0uNDMtLjU4LS43Mi0xLjMtLjg5LTIuMTYtLjExLS41Ni0uMTctMS40Ni0uMTctMi42OXYtMTAuNThoMi44OXY5LjQ3YzAsMS41MS4wNiwyLjUzLjE3LDMuMDUuMTguNzYuNTYsMS4zNiwxLjE0LDEuOC41OS40MywxLjMzLjY0LDIuMi42NHMxLjY4LS4yMiwyLjQ0LS42NmMuNzYtLjQ1LDEuMy0xLjA1LDEuNjEtMS44MS4zMi0uNzcuNDgtMS44OS40OC0zLjM0di05LjE0aDIuODl2MTcuMDZoLTIuNTlaTTcwMC40MiwzNDQuNHYtMTcuMDZoMi41OXYyLjQ0YzEuMjYtMS44OCwzLjA3LTIuODEsNS40NC0yLjgxLDEuMDIsMCwxLjk2LjE5LDIuODMuNTYuODYuMzYsMS41MS44NSwxLjk0LDEuNDUuNDMuNTkuNzIsMS4zLjg5LDIuMTIuMTEuNTMuMTcsMS40Ny4xNywyLjgxdjEwLjQ4aC0yLjg5di0xMC4zOGMwLTEuMTgtLjExLTIuMDYtLjM0LTIuNjQtLjIyLS41OC0uNjEtMS4wNS0xLjE5LTEuMzktLjU3LS4zNS0xLjI0LS41My0yLjAyLS41My0xLjI0LDAtMi4zMS4zOS0zLjIsMS4xNy0uODkuNzgtMS4zMywyLjI3LTEuMzMsNC40NXY5LjMxaC0yLjg5Wk03MjkuODQsMzM4LjE1bDIuODQuMzhjLS4zMSwxLjk2LTEuMTEsMy40OS0yLjM5LDQuNjEtMS4yNywxLjEtMi44NCwxLjY2LTQuNywxLjY2LTIuMzMsMC00LjIxLS43Ni01LjY0LTIuMjgtMS40Mi0xLjUzLTIuMTItMy43Mi0yLjEyLTYuNTgsMC0xLjgzLjMtMy40NC45MS00LjgzLjYxLTEuMzksMS41NS0yLjQyLDIuOC0zLjExczIuNjEtMS4wMyw0LjA4LTEuMDNjMS44NSwwLDMuMzcuNDcsNC41NSwxLjQxLDEuMTguOTQsMS45MywyLjI3LDIuMjUsMy45OGwtMi44LjQ0Yy0uMjctMS4xNS0uNzUtMi4wMS0xLjQ0LTIuNTgtLjY4LS41OC0xLjQ5LS44OC0yLjQ1LS44OC0xLjQ2LDAtMi42NS41Mi0zLjU2LDEuNTYtLjkxLDEuMDQtMS4zNiwyLjY5LTEuMzYsNC45NXMuNDQsMy45NiwxLjMxLDVjLjg5LDEuMDQsMi4wNCwxLjU2LDMuNDUsMS41NiwxLjE0LDAsMi4wOC0uMzUsMi44NC0xLjA1Ljc2LS43LDEuMjQtMS43NywxLjQ0LTMuMjJaTTc0MS40NywzNDEuODNsLjQxLDIuNTVjLS44MS4xNy0xLjU0LjI1LTIuMTcuMjUtMS4wNSwwLTEuODctLjE2LTIuNDUtLjQ4LS41Ny0uMzMtLjk4LS43Ny0xLjIyLTEuMzEtLjIzLS41NC0uMzQtMS42OC0uMzQtMy40MnYtOS44MWgtMi4xMnYtMi4yNWgyLjEydi00LjIybDIuODgtMS43M3Y1Ljk1aDIuOTF2Mi4yNWgtMi45MXY5Ljk4YzAsLjgyLjA1LDEuMzUuMTQsMS41OS4xLjIzLjI3LjQyLjUuNTYuMjMuMTQuNTYuMi45OC4yLjMyLDAsLjc1LS4wNCwxLjI4LS4xMVpNNzQ0LjMxLDMyNC4xOXYtMy4zM2gyLjg5djMuMzNoLTIuODlaTTc0NC4zMSwzNDQuNHYtMTcuMDZoMi44OXYxNy4wNmgtMi44OVpNNzUwLjUyLDMzNS44N2MwLTMuMTYuODgtNS40OSwyLjYyLTcuMDIsMS40Ny0xLjI2LDMuMjYtMS44OSw1LjM4LTEuODksMi4zNCwwLDQuMjYuNzcsNS43NSwyLjMxLDEuNDksMS41MywyLjIzLDMuNjUsMi4yMyw2LjM2LDAsMi4yLS4zMywzLjkzLTEsNS4xOS0uNjYsMS4yNS0xLjYxLDIuMjItMi44OCwyLjkyLTEuMjUuNy0yLjYyLDEuMDUtNC4xMSwxLjA1LTIuMzksMC00LjMyLS43Ny01LjgtMi4zLTEuNDctMS41My0yLjItMy43NC0yLjItNi42MlpNNzUzLjQ5LDMzNS44N2MwLDIuMTkuNDcsMy44MywxLjQyLDQuOTIuOTYsMS4wOCwyLjE2LDEuNjIsMy42MSwxLjYyczIuNjEtLjU1LDMuNTYtMS42NGMuOTYtMS4wOSwxLjQ0LTIuNzYsMS40NC01LDAtMi4xLS40OC0zLjctMS40NC00Ljc4LS45Ni0xLjA5LTIuMTUtMS42NC0zLjU2LTEuNjRzLTIuNjUuNTQtMy42MSwxLjYyYy0uOTUsMS4wOC0xLjQyLDIuNzEtMS40Miw0Ljg5Wk03NjkuODksMzQ0LjR2LTE3LjA2aDIuNTl2Mi40NGMxLjI2LTEuODgsMy4wNy0yLjgxLDUuNDQtMi44MSwxLjAyLDAsMS45Ni4xOSwyLjgzLjU2Ljg2LjM2LDEuNTEuODUsMS45NCwxLjQ1LjQzLjU5LjcyLDEuMy44OSwyLjEyLjExLjUzLjE3LDEuNDcuMTcsMi44MXYxMC40OGgtMi44OXYtMTAuMzhjMC0xLjE4LS4xMS0yLjA2LS4zNC0yLjY0LS4yMi0uNTgtLjYxLTEuMDUtMS4xOS0xLjM5LS41Ny0uMzUtMS4yNC0uNTMtMi4wMi0uNTMtMS4yNCwwLTIuMzEuMzktMy4yLDEuMTctLjg5Ljc4LTEuMzMsMi4yNy0xLjMzLDQuNDV2OS4zMWgtMi44OVoiLz4KICAgICAgPHBhdGggY2xhc3M9InN0OCIgZD0iTTgzMC42OCw0NC4wNmgxNjguMDl2MTQ2LjQ5aC0xNjguMDlWNDQuMDZaIi8+CiAgICAgIDxwYXRoIGQ9Ik04NDguMTYsODQuMDhsMi45NC0uMjdjLjE0LDEuMTkuNDYsMi4xNi45NywyLjkxczEuMywxLjM2LDIuMzYsMS44M2MxLjA3LjQ3LDIuMjguNywzLjYyLjcsMS4xOSwwLDIuMjMtLjE4LDMuMTQtLjUzLjkyLS4zNSwxLjU5LS44NCwyLjAzLTEuNDUuNDUtLjYxLjY3LTEuMjkuNjctMi4wMnMtLjIxLTEuMzktLjY0LTEuOTRjLS40My0uNTUtMS4xNC0xLjAyLTIuMTItMS4zOS0uNjQtLjI0LTIuMDQtLjYyLTQuMi0xLjE0LTIuMTYtLjUyLTMuNjctMS4wMS00LjUzLTEuNDctMS4xMi0uNTktMS45Ni0xLjMyLTIuNTItMi4xOS0uNTUtLjg4LS44My0xLjg1LS44My0yLjk0LDAtMS4xOS4zNC0yLjMsMS4wMi0zLjMzLjY4LTEuMDQsMS42Ni0xLjgzLDIuOTUtMi4zNnMyLjczLS44LDQuMzEtLjhjMS43NSwwLDMuMjkuMjgsNC42Mi44NCwxLjMzLjU1LDIuMzYsMS4zOCwzLjA4LDIuNDdzMS4xLDIuMzMsMS4xNiwzLjcybC0yLjk4LjIyYy0uMTctMS40OS0uNzEtMi42MS0xLjY0LTMuMzgtLjkzLS43Ni0yLjI5LTEuMTQtNC4wOS0xLjE0cy0zLjI2LjM1LTQuMTIsMS4wNWMtLjg2LjY5LTEuMywxLjUyLTEuMywyLjQ4LDAsLjg1LjMxLDEuNTUuOTIsMi4wOS41OS41NCwyLjE2LDEuMSw0LjY5LDEuNjcsMi41NC41Nyw0LjI4LDEuMDgsNS4yMiwxLjUyLDEuMzguNjIsMi4zOSwxLjQyLDMuMDMsMi4zOS42Ni45Ny45OCwyLjA4Ljk4LDMuMzRzLS4zNiwyLjQ0LTEuMDgsMy41NWMtLjcyLDEuMS0xLjc1LDEuOTctMy4wOSwyLjU5LTEuMzQuNjEtMi44NS45Mi00LjUzLjkyLTIuMTQsMC0zLjkyLS4zMS01LjM2LS45NHMtMi41Ny0xLjU2LTMuMzktMi44Yy0uODEtMS4yNS0xLjI0LTIuNjYtMS4yOC00LjIzWk04ODIuNDYsODYuMTVsMi45OC4zOGMtLjQ3LDEuNzUtMS4zNCwzLjExLTIuNjIsNC4wOC0xLjI3Ljk2LTIuOSwxLjQ0LTQuODgsMS40NC0yLjQ5LDAtNC40Ny0uNzctNS45NC0yLjMtMS40Ni0xLjU0LTIuMTktMy43LTIuMTktNi40OHMuNzQtNS4wOSwyLjIyLTYuNjdjMS40OC0xLjU4LDMuNC0yLjM4LDUuNzUtMi4zOHM0LjE0Ljc4LDUuNTgsMi4zM2MxLjQ1LDEuNTUsMi4xNywzLjczLDIuMTcsNi41NSwwLC4xOCwwLC40NC0uMDIuNzhoLTEyLjcyYy4xMSwxLjg2LjY1LDMuMywxLjU5LDQuMy45NSwxLDIuMTQsMS41LDMuNTYsMS41LDEuMDYsMCwxLjk3LS4yOCwyLjcyLS44My43NS0uNTYsMS4zNC0xLjQ2LDEuNzgtMi42OVpNODcyLjk3LDgxLjQ3aDkuNTJjLS4xMi0xLjQzLS40OS0yLjUtMS4wOS0zLjIyLS45Mi0xLjExLTIuMTEtMS42Ny0zLjU4LTEuNjctMS4zMywwLTIuNDUuNDUtMy4zNiwxLjM0LS45Ljg5LTEuMzksMi4wNy0xLjQ4LDMuNTVaTTg4OS4wMiw5MS42NXYtMjMuNTVoMi44OXYyMy41NWgtMi44OVpNOTA4LjA2LDg2LjE1bDIuOTguMzhjLS40NywxLjc1LTEuMzQsMy4xMS0yLjYyLDQuMDgtMS4yNy45Ni0yLjksMS40NC00Ljg4LDEuNDQtMi40OSwwLTQuNDctLjc3LTUuOTQtMi4zLTEuNDYtMS41NC0yLjE5LTMuNy0yLjE5LTYuNDgsMC0yLjg2Ljc0LTUuMDksMi4yMi02LjY3LDEuNDgtMS41OCwzLjQtMi4zOCw1Ljc1LTIuMzhzNC4xNC43OCw1LjU4LDIuMzNjMS40NSwxLjU1LDIuMTcsMy43MywyLjE3LDYuNTUsMCwuMTgsMCwuNDQtLjAyLjc4aC0xMi43MmMuMTEsMS44Ni42NSwzLjMsMS41OSw0LjMuOTUsMSwyLjE0LDEuNSwzLjU2LDEuNSwxLjA2LDAsMS45Ny0uMjgsMi43Mi0uODMuNzUtLjU2LDEuMzQtMS40NiwxLjc4LTIuNjlaTTg5OC41Nyw4MS40N2g5LjUyYy0uMTItMS40My0uNDktMi41LTEuMDktMy4yMi0uOTItMS4xMS0yLjExLTEuNjctMy41OC0xLjY3LTEuMzMsMC0yLjQ1LjQ1LTMuMzYsMS4zNC0uOS44OS0xLjM5LDIuMDctMS40OCwzLjU1Wk05MjUuOCw4NS40bDIuODQuMzhjLS4zMSwxLjk2LTEuMTEsMy40OS0yLjM5LDQuNjEtMS4yNywxLjEtMi44NCwxLjY2LTQuNywxLjY2LTIuMzMsMC00LjIxLS43Ni01LjY0LTIuMjgtMS40Mi0xLjUzLTIuMTMtMy43Mi0yLjEyLTYuNTgsMC0xLjgzLjMtMy40NC45MS00LjgzLjYxLTEuMzksMS41NS0yLjQyLDIuOC0zLjExLDEuMjUtLjY5LDIuNjEtMS4wMyw0LjA4LTEuMDMsMS44NSwwLDMuMzcuNDcsNC41NSwxLjQxLDEuMTguOTQsMS45MywyLjI3LDIuMjUsMy45OGwtMi44LjQ0Yy0uMjctMS4xNS0uNzUtMi4wMS0xLjQ0LTIuNTgtLjY4LS41OC0xLjQ5LS44OC0yLjQ1LS44OC0xLjQ2LDAtMi42NS41Mi0zLjU2LDEuNTYtLjkxLDEuMDQtMS4zNiwyLjY5LTEuMzYsNC45NSwwLDIuMjkuNDQsMy45NiwxLjMxLDUsLjg5LDEuMDQsMi4wNCwxLjU2LDMuNDUsMS41NiwxLjE0LDAsMi4wOC0uMzUsMi44NC0xLjA1Ljc2LS43LDEuMjQtMS43NywxLjQ0LTMuMjJaTTkzNy40NCw4OS4wN2wuNDEsMi41NWMtLjgxLjE3LTEuNTQuMjUtMi4xNy4yNS0xLjA1LDAtMS44Ny0uMTYtMi40NS0uNDgtLjU3LS4zMy0uOTgtLjc3LTEuMjItMS4zMS0uMjMtLjU0LS4zNC0xLjY4LS4zNC0zLjQydi05LjgxaC0yLjEydi0yLjI1aDIuMTJ2LTQuMjJsMi44OC0xLjczdjUuOTVoMi45MXYyLjI1aC0yLjkxdjkuOThjMCwuODIuMDUsMS4zNS4xNCwxLjU5LjEuMjMuMjcuNDIuNS41Ni4yMy4xNC41Ni4yLjk4LjIuMzIsMCwuNzUtLjA0LDEuMjgtLjExWk05NjAuNTIsODkuNTRjLTEuMDcuOTItMi4xLDEuNTYtMy4wOSwxLjk0LS45OS4zOC0yLjA1LjU2LTMuMTkuNTYtMS44NywwLTMuMzItLjQ2LTQuMzMtMS4zOC0xLS45Mi0xLjUtMi4wOS0xLjUtMy41MiwwLS44My4xOS0xLjU5LjU2LTIuMjguMzktLjcuODktMS4yNiwxLjUtMS42Ny42MS0uNDIsMS4zMS0uNzMsMi4wOC0uOTQuNTctLjE2LDEuNDMtLjMsMi41OC0uNDQsMi4zMy0uMjgsNC4wNS0uNjEsNS4xNi0xLC4wMS0uNC4wMi0uNjUuMDItLjc1LDAtMS4xOC0uMjgtMi4wMS0uODMtMi40OC0uNzQtLjY2LTEuODMtLjk4LTMuMjgtLjk4LTEuMzYsMC0yLjM3LjI0LTMuMDIuNzItLjY1LjQ3LTEuMTIsMS4zMS0xLjQ0LDIuNTNsLTIuODMtLjM5Yy4yNi0xLjIxLjY4LTIuMTgsMS4yNy0yLjkyLjU5LS43NSwxLjQ0LTEuMzIsMi41NS0xLjcyLDEuMTEtLjQxLDIuNDEtLjYxLDMuODgtLjYxczIuNjQuMTcsMy41NS41MmMuOTIuMzQsMS41OS43OCwyLjAyLDEuMy40My41MS43MiwxLjE2Ljg5LDEuOTUuMS41LjE2LDEuMzkuMTYsMi42N3YzLjg2YzAsMi42OS4wNiw0LjM5LjE3LDUuMDkuMTMuNzEuMzcsMS4zOS43MywyLjA1aC0zLjAyYy0uMy0uNi0uNDktMS4zMS0uNTgtMi4xMVpNOTYwLjI5LDgzLjA4Yy0xLjA1LjQzLTIuNjMuNzktNC43MywxLjA5LTEuMTkuMTgtMi4wMy4zOC0yLjUyLjU5LS40OS4yMS0uODcuNTItMS4xNC45NC0uMjcuNDEtLjQxLjg2LS40MSwxLjM2LDAsLjc3LjI5LDEuNDIuODgsMS45NC41OC41MSwxLjQ0Ljc3LDIuNTYuNzdzMi4xLS4yNCwyLjk3LS43M2MuODgtLjQ5LDEuNTItMS4xNiwxLjkyLTIsLjMxLS42Ni40Ny0xLjYyLjQ3LTIuODl2LTEuMDZaIi8+CiAgICAgIDxwYXRoIGQ9Ik04NDkuNTQsMTMxLjEzdi0xNC44MWgtMi41NXYtMi4yNWgyLjU1di0xLjgxYzAtMS4xNS4xLTEuOTkuMy0yLjU1LjI4LS43NS43Ny0xLjM1LDEuNDctMS44MS43MS0uNDcsMS42OS0uNywyLjk1LS43LjgxLDAsMS43MS4wOSwyLjcuMjhsLS40NCwyLjUyYy0uNTktLjEtMS4xNi0uMTYtMS43LS4xNi0uODgsMC0xLjQ5LjE5LTEuODYuNTZzLS41NSwxLjA4LS41NSwyLjExdjEuNTZoMy4zM3YyLjI1aC0zLjMzdjE0LjgxaC0yLjg4Wk04NjkuMTYsMTMxLjEzdi0yLjVjLTEuMzIsMS45My0zLjEzLDIuODktNS40MSwyLjg5LTEuMDEsMC0xLjk1LS4xOS0yLjgzLS41OC0uODYtLjM5LTEuNTEtLjg3LTEuOTQtMS40NS0uNDMtLjU4LS43Mi0xLjMtLjg5LTIuMTYtLjExLS41Ni0uMTctMS40Ni0uMTctMi42OXYtMTAuNThoMi44OXY5LjQ3YzAsMS41MS4wNiwyLjUzLjE3LDMuMDUuMTguNzYuNTYsMS4zNiwxLjE0LDEuOC41OS40MywxLjMzLjY0LDIuMi42NHMxLjY4LS4yMiwyLjQ0LS42NmMuNzYtLjQ1LDEuMy0xLjA1LDEuNjEtMS44MS4zMi0uNzcuNDgtMS44OS40OC0zLjM0di05LjE0aDIuODl2MTcuMDZoLTIuNTlaTTg3Ni4yOCwxMzEuMTN2LTE3LjA2aDIuNTl2Mi40NGMxLjI2LTEuODgsMy4wNy0yLjgxLDUuNDQtMi44MSwxLjAyLDAsMS45Ni4xOSwyLjgzLjU2Ljg2LjM2LDEuNTEuODUsMS45NCwxLjQ1LjQzLjU5LjcyLDEuMy44OSwyLjEyLjExLjUzLjE3LDEuNDcuMTcsMi44MXYxMC40OGgtMi44OXYtMTAuMzhjMC0xLjE4LS4xMS0yLjA2LS4zNC0yLjY0LS4yMi0uNTgtLjYxLTEuMDUtMS4xOS0xLjM5LS41Ny0uMzUtMS4yNC0uNTMtMi4wMi0uNTMtMS4yNCwwLTIuMzEuMzktMy4yLDEuMTctLjg5Ljc4LTEuMzMsMi4yNy0xLjMzLDQuNDV2OS4zMWgtMi44OVpNOTA1LjcsMTI0Ljg4bDIuODQuMzhjLS4zMSwxLjk2LTEuMTEsMy40OS0yLjM5LDQuNjEtMS4yNywxLjEtMi44NCwxLjY2LTQuNywxLjY2LTIuMzMsMC00LjIxLS43Ni01LjY0LTIuMjgtMS40Mi0xLjUzLTIuMTItMy43Mi0yLjEyLTYuNTgsMC0xLjgzLjMtMy40NC45MS00LjgzLjYxLTEuMzksMS41NS0yLjQyLDIuOC0zLjExczIuNjEtMS4wMyw0LjA4LTEuMDNjMS44NSwwLDMuMzcuNDcsNC41NSwxLjQxLDEuMTguOTQsMS45MywyLjI3LDIuMjUsMy45OGwtMi44LjQ0Yy0uMjctMS4xNS0uNzUtMi4wMS0xLjQ0LTIuNTgtLjY4LS41OC0xLjQ5LS44OC0yLjQ1LS44OC0xLjQ2LDAtMi42NS41Mi0zLjU2LDEuNTYtLjkxLDEuMDQtMS4zNiwyLjY5LTEuMzYsNC45NXMuNDQsMy45NiwxLjMxLDVjLjg5LDEuMDQsMi4wNCwxLjU2LDMuNDUsMS41NiwxLjE0LDAsMi4wOC0uMzUsMi44NC0xLjA1Ljc2LS43LDEuMjQtMS43NywxLjQ0LTMuMjJaTTkxNy4zMywxMjguNTVsLjQxLDIuNTVjLS44MS4xNy0xLjU0LjI1LTIuMTcuMjUtMS4wNSwwLTEuODctLjE2LTIuNDUtLjQ4LS41Ny0uMzMtLjk4LS43Ny0xLjIyLTEuMzEtLjIzLS41NC0uMzQtMS42OC0uMzQtMy40MnYtOS44MWgtMi4xMnYtMi4yNWgyLjEydi00LjIybDIuODgtMS43M3Y1Ljk1aDIuOTF2Mi4yNWgtMi45MXY5Ljk4YzAsLjgyLjA1LDEuMzUuMTQsMS41OS4xLjIzLjI3LjQyLjUuNTYuMjMuMTQuNTYuMi45OC4yLjMyLDAsLjc1LS4wNCwxLjI4LS4xMVpNOTIwLjE3LDExMC45MXYtMy4zM2gyLjg5djMuMzNoLTIuODlaTTkyMC4xNywxMzEuMTN2LTE3LjA2aDIuODl2MTcuMDZoLTIuODlaTTkyNi4zOCwxMjIuNmMwLTMuMTYuODctNS40OSwyLjYyLTcuMDIsMS40Ny0xLjI2LDMuMjYtMS44OSw1LjM4LTEuODksMi4zNCwwLDQuMjYuNzcsNS43NSwyLjMxLDEuNDksMS41MywyLjIzLDMuNjUsMi4yMyw2LjM2LDAsMi4yLS4zMywzLjkzLTEsNS4xOS0uNjYsMS4yNS0xLjYxLDIuMjItMi44OCwyLjkyLTEuMjUuNy0yLjYyLDEuMDUtNC4xMSwxLjA1LTIuMzksMC00LjMyLS43Ny01LjgtMi4zLTEuNDctMS41My0yLjItMy43NC0yLjItNi42M1pNOTI5LjM1LDEyMi42YzAsMi4xOS40NywzLjgzLDEuNDIsNC45Mi45NiwxLjA4LDIuMTYsMS42MywzLjYxLDEuNjNzMi42MS0uNTUsMy41Ni0xLjY0Yy45Ni0xLjA5LDEuNDQtMi43NiwxLjQ0LTUsMC0yLjEtLjQ4LTMuNy0xLjQ0LTQuNzgtLjk2LTEuMDktMi4xNS0xLjY0LTMuNTYtMS42NHMtMi42NS41NC0zLjYxLDEuNjJjLS45NSwxLjA4LTEuNDIsMi43MS0xLjQyLDQuODlaTTk0NS43NSwxMzEuMTN2LTE3LjA2aDIuNTl2Mi40NGMxLjI2LTEuODgsMy4wNy0yLjgxLDUuNDQtMi44MSwxLjAyLDAsMS45Ni4xOSwyLjgzLjU2Ljg2LjM2LDEuNTEuODUsMS45NCwxLjQ1LjQzLjU5LjcyLDEuMy44OSwyLjEyLjExLjUzLjE3LDEuNDcuMTcsMi44MXYxMC40OGgtMi44OXYtMTAuMzhjMC0xLjE4LS4xMS0yLjA2LS4zNC0yLjY0LS4yMi0uNTgtLjYxLTEuMDUtMS4xOS0xLjM5LS41Ny0uMzUtMS4yNC0uNTMtMi4wMi0uNTMtMS4yNCwwLTIuMzEuMzktMy4yLDEuMTctLjg5Ljc4LTEuMzMsMi4yNy0xLjMzLDQuNDV2OS4zMWgtMi44OVoiLz4KICAgICAgPHBhdGggZD0iTTg1NS4xNiwxNjguMDRsLjQxLDIuNTVjLS44MS4xNy0xLjU0LjI1LTIuMTcuMjUtMS4wNSwwLTEuODctLjE2LTIuNDUtLjQ4LS41Ny0uMzMtLjk4LS43Ny0xLjIyLTEuMzEtLjIzLS41NC0uMzQtMS42OC0uMzQtMy40MnYtOS44MWgtMi4xMnYtMi4yNWgyLjEydi00LjIybDIuODgtMS43M3Y1Ljk1aDIuOTF2Mi4yNWgtMi45MXY5Ljk4YzAsLjgyLjA1LDEuMzUuMTQsMS41OS4xLjIzLjI3LjQyLjUuNTYuMjMuMTQuNTYuMi45OC4yLjMyLDAsLjc1LS4wNCwxLjI4LS4xMVpNODU2LjkxLDE2Mi4wOGMwLTMuMTYuODctNS40OSwyLjYyLTcuMDIsMS40Ny0xLjI2LDMuMjYtMS44OSw1LjM4LTEuODksMi4zNCwwLDQuMjYuNzcsNS43NSwyLjMxLDEuNDksMS41MywyLjIzLDMuNjUsMi4yMyw2LjM2LDAsMi4yLS4zMywzLjkzLTEsNS4xOS0uNjYsMS4yNS0xLjYxLDIuMjItMi44OCwyLjkyLTEuMjUuNy0yLjYyLDEuMDUtNC4xMSwxLjA1LTIuMzksMC00LjMyLS43Ny01LjgtMi4zLTEuNDctMS41My0yLjItMy43NC0yLjItNi42MlpNODU5Ljg4LDE2Mi4wOGMwLDIuMTkuNDcsMy44MywxLjQyLDQuOTIuOTYsMS4wOCwyLjE2LDEuNjIsMy42MSwxLjYyczIuNjEtLjU1LDMuNTYtMS42NGMuOTYtMS4wOSwxLjQ0LTIuNzYsMS40NC01LDAtMi4xLS40OC0zLjctMS40NC00Ljc4LS45Ni0xLjA5LTIuMTUtMS42NC0zLjU2LTEuNjRzLTIuNjUuNTQtMy42MSwxLjYyYy0uOTUsMS4wOC0xLjQyLDIuNzEtMS40Miw0Ljg5Wk04OTYuNTQsMTY0LjM2bDIuODQuMzhjLS4zMSwxLjk2LTEuMTEsMy40OS0yLjM5LDQuNjEtMS4yNywxLjEtMi44NCwxLjY2LTQuNywxLjY2LTIuMzMsMC00LjIxLS43Ni01LjY0LTIuMjgtMS40Mi0xLjUzLTIuMTItMy43Mi0yLjEyLTYuNTgsMC0xLjgzLjMtMy40NC45MS00LjgzLjYxLTEuMzksMS41NS0yLjQyLDIuOC0zLjExczIuNjEtMS4wMyw0LjA4LTEuMDNjMS44NSwwLDMuMzcuNDcsNC41NSwxLjQxczEuOTMsMi4yNywyLjI1LDMuOThsLTIuOC40NGMtLjI3LTEuMTUtLjc1LTIuMDEtMS40NC0yLjU4LS42OC0uNTgtMS40OS0uODgtMi40NS0uODgtMS40NiwwLTIuNjUuNTItMy41NiwxLjU2LS45MSwxLjA0LTEuMzYsMi42OS0xLjM2LDQuOTVzLjQ0LDMuOTYsMS4zMSw1Yy44OSwxLjA0LDIuMDQsMS41NiwzLjQ1LDEuNTYsMS4xNCwwLDIuMDgtLjM1LDIuODQtMS4wNS43Ni0uNywxLjI0LTEuNzcsMS40NC0zLjIyWk05MTIuOTksMTY4LjUxYy0xLjA3LjkyLTIuMSwxLjU2LTMuMDksMS45NHMtMi4wNS41Ni0zLjE5LjU2Yy0xLjg4LDAtMy4zMi0uNDYtNC4zMy0xLjM4LTEtLjkyLTEuNS0yLjA5LTEuNS0zLjUyLDAtLjgzLjE5LTEuNTkuNTYtMi4yOC4zOS0uNy44OS0xLjI2LDEuNS0xLjY3LjYxLS40MiwxLjMxLS43MywyLjA4LS45NC41Ny0uMTYsMS40My0uMywyLjU4LS40NCwyLjMzLS4yOCw0LjA1LS42MSw1LjE2LTEsLjAxLS40LjAyLS42NS4wMi0uNzUsMC0xLjE4LS4yOC0yLjAxLS44My0yLjQ4LS43NC0uNjYtMS44My0uOTgtMy4yOC0uOTgtMS4zNiwwLTIuMzcuMjQtMy4wMi43Mi0uNjUuNDctMS4xMiwxLjMxLTEuNDQsMi41M2wtMi44My0uMzljLjI2LTEuMjEuNjgtMi4xOCwxLjI3LTIuOTIuNTktLjc1LDEuNDQtMS4zMiwyLjU1LTEuNzIsMS4xMS0uNDEsMi40MS0uNjEsMy44OC0uNjFzMi42NC4xNywzLjU1LjUyYy45Mi4zNCwxLjU5Ljc4LDIuMDIsMS4zLjQzLjUxLjcyLDEuMTYuODksMS45NS4xLjUuMTYsMS4zOS4xNiwyLjY3djMuODZjMCwyLjY5LjA2LDQuMzkuMTcsNS4wOS4xMi43MS4zNywxLjM5LjczLDIuMDVoLTMuMDJjLS4zLS42LS40OS0xLjMxLS41OC0yLjExWk05MTIuNzUsMTYyLjA1Yy0xLjA1LjQzLTIuNjMuNzktNC43MywxLjA5LTEuMTkuMTgtMi4wMy4zOC0yLjUyLjU5LS40OS4yMS0uODcuNTItMS4xNC45NC0uMjcuNDEtLjQxLjg2LS40MSwxLjM2LDAsLjc3LjI5LDEuNDIuODgsMS45NC41OC41MSwxLjQ0Ljc3LDIuNTYuNzdzMi4xLS4yNCwyLjk3LS43M2MuODgtLjQ5LDEuNTItMS4xNiwxLjkyLTIsLjMxLS42Ni40Ny0xLjYyLjQ3LTIuODl2LTEuMDZaTTkyMC4wOSwxNzAuNjF2LTIzLjU1aDIuODl2MjMuNTVoLTIuODlaTTkyNy40LDE3MC42MXYtMjMuNTVoMi44OXYyMy41NWgtMi44OVoiLz4KICAgICAgPHBhdGggY2xhc3M9InN0OCIgZD0iTTM3MS41MSw2OTkuOTdoMzI4LjU0djk0Ljc3aC0zMjguNTR2LTk0Ljc3WiIvPgogICAgICA8cGF0aCBkPSJNMzk2LjYxLDc0Ny41NnYtMjMuNTVoOC4xMWMxLjgzLDAsMy4yMy4xMSw0LjIuMzQsMS4zNC4zMSwyLjQ5Ljg4LDMuNDUsMS42OSwxLjI0LDEuMDQsMi4xNywyLjM4LDIuNzgsNC4wMi42MSwxLjY0LjkyLDMuNS45Miw1LjU5LDAsMS43OS0uMjEsMy4zOC0uNjIsNC43Ny0uNDIsMS4zOC0uOTUsMi41Mi0xLjYxLDMuNDItLjY1LjkxLTEuMzYsMS42Mi0yLjE0LDIuMTQtLjc3LjUyLTEuNzEuOTItMi44MSwxLjE5LTEuMDkuMjYtMi4zNS4zOS0zLjc4LjM5aC04LjVaTTM5OS43Myw3NDQuNzhoNS4wM2MxLjU1LDAsMi43Ny0uMTQsMy42NC0uNDIuODktLjI5LDEuNTktLjcsMi4xMi0xLjIzLjczLS43NCwxLjMtMS43MywxLjcyLTIuOTcuNDItMS4yNS42Mi0yLjc3LjYyLTQuNTUsMC0yLjQ2LS40MS00LjM1LTEuMjItNS42Ny0uODEtMS4zMi0xLjgtMi4yMS0yLjk1LTIuNjYtLjgzLS4zMi0yLjE4LS40OC00LjAzLS40OGgtNC45NHYxNy45OFpNNDE4LjkyLDczOS4wM2MwLTMuMTYuODgtNS40OSwyLjYyLTcuMDIsMS40Ny0xLjI2LDMuMjYtMS44OSw1LjM4LTEuODksMi4zNCwwLDQuMjYuNzcsNS43NSwyLjMxLDEuNDksMS41MywyLjIzLDMuNjUsMi4yMyw2LjM2LDAsMi4yLS4zMywzLjkzLTEsNS4xOS0uNjYsMS4yNS0xLjYxLDIuMjItMi44OCwyLjkyLTEuMjUuNy0yLjYyLDEuMDUtNC4xMSwxLjA1LTIuMzksMC00LjMyLS43Ny01LjgtMi4zLTEuNDctMS41My0yLjItMy43NC0yLjItNi42MlpNNDIxLjg5LDczOS4wM2MwLDIuMTkuNDcsMy44MywxLjQyLDQuOTIuOTYsMS4wOCwyLjE2LDEuNjIsMy42MSwxLjYyczIuNjEtLjU1LDMuNTYtMS42NGMuOTYtMS4wOSwxLjQ0LTIuNzYsMS40NC01LDAtMi4xLS40OC0zLjctMS40NC00Ljc4LS45Ni0xLjA5LTIuMTUtMS42NC0zLjU2LTEuNjRzLTIuNjUuNTQtMy42MSwxLjYyYy0uOTUsMS4wOC0xLjQyLDIuNzEtMS40Miw0Ljg5Wk00MzguMjksNzQ3LjU2di0xNy4wNmgyLjU5djIuNDRjMS4yNi0xLjg4LDMuMDctMi44MSw1LjQ0LTIuODEsMS4wMiwwLDEuOTYuMTksMi44My41Ni44Ni4zNiwxLjUxLjg1LDEuOTQsMS40NS40My41OS43MiwxLjMuODksMi4xMi4xMS41My4xNywxLjQ3LjE3LDIuODF2MTAuNDhoLTIuODl2LTEwLjM4YzAtMS4xOC0uMTEtMi4wNi0uMzQtMi42NC0uMjItLjU4LS42MS0xLjA1LTEuMTktMS4zOS0uNTctLjM1LTEuMjQtLjUzLTIuMDItLjUzLTEuMjQsMC0yLjMxLjM5LTMuMiwxLjE3LS44OS43OC0xLjMzLDIuMjctMS4zMyw0LjQ1djkuMzFoLTIuODlaTTQ2Ny43MSw3NDUuNDVjLTEuMDcuOTItMi4xLDEuNTYtMy4wOSwxLjk0LS45OS4zOC0yLjA1LjU2LTMuMTkuNTYtMS44NywwLTMuMzItLjQ2LTQuMzMtMS4zOC0xLS45Mi0xLjUtMi4wOS0xLjUtMy41MiwwLS44My4xOS0xLjU5LjU2LTIuMjguMzktLjcuODktMS4yNiwxLjUtMS42Ny42MS0uNDIsMS4zMS0uNzMsMi4wOC0uOTQuNTctLjE2LDEuNDMtLjMsMi41OC0uNDQsMi4zMy0uMjgsNC4wNS0uNjEsNS4xNi0xLC4wMS0uNC4wMi0uNjUuMDItLjc1LDAtMS4xOC0uMjgtMi4wMS0uODMtMi40OC0uNzQtLjY2LTEuODMtLjk4LTMuMjgtLjk4LTEuMzYsMC0yLjM3LjI0LTMuMDIuNzItLjY1LjQ3LTEuMTIsMS4zMS0xLjQ0LDIuNTNsLTIuODMtLjM5Yy4yNi0xLjIxLjY4LTIuMTgsMS4yNy0yLjkyLjU5LS43NSwxLjQ0LTEuMzIsMi41NS0xLjcyLDEuMTEtLjQxLDIuNDEtLjYxLDMuODgtLjYxczIuNjQuMTcsMy41NS41MmMuOTIuMzQsMS41OS43OCwyLjAyLDEuMy40My41MS43MiwxLjE2Ljg5LDEuOTUuMS41LjE2LDEuMzkuMTYsMi42N3YzLjg2YzAsMi42OS4wNiw0LjM5LjE3LDUuMDkuMTMuNzEuMzcsMS4zOS43MywyLjA1aC0zLjAyYy0uMy0uNi0uNDktMS4zMS0uNTgtMi4xMVpNNDY3LjQ4LDczOWMtMS4wNS40My0yLjYzLjc5LTQuNzMsMS4wOS0xLjE5LjE4LTIuMDMuMzgtMi41Mi41OS0uNDkuMjEtLjg3LjUyLTEuMTQuOTQtLjI3LjQxLS40MS44Ni0uNDEsMS4zNiwwLC43Ny4yOSwxLjQyLjg4LDEuOTQuNTguNTEsMS40NC43NywyLjU2Ljc3czIuMS0uMjQsMi45Ny0uNzNjLjg4LS40OSwxLjUyLTEuMTYsMS45Mi0yLC4zMS0uNjYuNDctMS42Mi40Ny0yLjg5di0xLjA2Wk00ODEuMTksNzQ0Ljk4bC40MSwyLjU1Yy0uODEuMTctMS41NC4yNS0yLjE3LjI1LTEuMDUsMC0xLjg3LS4xNi0yLjQ1LS40OC0uNTctLjMzLS45OC0uNzctMS4yMi0xLjMxLS4yMy0uNTQtLjM0LTEuNjgtLjM0LTMuNDJ2LTkuODFoLTIuMTJ2LTIuMjVoMi4xMnYtNC4yMmwyLjg4LTEuNzN2NS45NWgyLjkxdjIuMjVoLTIuOTF2OS45OGMwLC44Mi4wNSwxLjM1LjE0LDEuNTkuMS4yMy4yNy40Mi41LjU2LjIzLjE0LjU2LjIuOTguMi4zMiwwLC43NS0uMDQsMS4yOC0uMTFaTTQ5NS42OSw3NDIuMDZsMi45OC4zOGMtLjQ3LDEuNzUtMS4zNCwzLjExLTIuNjIsNC4wOC0xLjI3Ljk2LTIuOSwxLjQ0LTQuODgsMS40NC0yLjQ5LDAtNC40Ny0uNzctNS45NC0yLjMtMS40Ni0xLjU0LTIuMTktMy43LTIuMTktNi40OHMuNzQtNS4wOSwyLjIyLTYuNjdjMS40OC0xLjU4LDMuNC0yLjM4LDUuNzUtMi4zOHM0LjE0Ljc4LDUuNTgsMi4zM2MxLjQ1LDEuNTUsMi4xNywzLjczLDIuMTcsNi41NSwwLC4xOCwwLC40NC0uMDIuNzhoLTEyLjcyYy4xMSwxLjg2LjY1LDMuMywxLjU5LDQuMy45NSwxLDIuMTQsMS41LDMuNTYsMS41LDEuMDYsMCwxLjk3LS4yOCwyLjcyLS44My43NS0uNTYsMS4zNC0xLjQ2LDEuNzgtMi42OVpNNDg2LjIsNzM3LjM5aDkuNTJjLS4xMi0xLjQzLS40OS0yLjUtMS4wOS0zLjIyLS45Mi0xLjExLTIuMTEtMS42Ny0zLjU4LTEuNjctMS4zMywwLTIuNDUuNDUtMy4zNiwxLjM0LS45Ljg5LTEuMzksMi4wNy0xLjQ4LDMuNTVaTTUxMi4xMyw3NDcuNTZ2LTE0LjgxaC0yLjU1di0yLjI1aDIuNTV2LTEuODFjMC0xLjE1LjEtMS45OS4zLTIuNTUuMjgtLjc1Ljc3LTEuMzUsMS40Ny0xLjgxLjcxLS40NywxLjY5LS43LDIuOTUtLjcuODEsMCwxLjcxLjA5LDIuNy4yOGwtLjQ0LDIuNTJjLS41OS0uMS0xLjE2LS4xNi0xLjctLjE2LS44OCwwLTEuNDkuMTktMS44Ni41NnMtLjU1LDEuMDgtLjU1LDIuMTF2MS41NmgzLjMzdjIuMjVoLTMuMzN2MTQuODFoLTIuODhaTTUzMS43Niw3NDcuNTZ2LTIuNWMtMS4zMiwxLjkzLTMuMTIsMi44OS01LjQxLDIuODktMS4wMSwwLTEuOTUtLjE5LTIuODMtLjU4LS44Ni0uMzktMS41MS0uODctMS45NC0xLjQ1LS40My0uNTgtLjcyLTEuMy0uODktMi4xNi0uMTEtLjU2LS4xNy0xLjQ2LS4xNy0yLjY5di0xMC41OGgyLjg5djkuNDdjMCwxLjUxLjA2LDIuNTMuMTcsMy4wNS4xOC43Ni41NiwxLjM2LDEuMTQsMS44LjU5LjQzLDEuMzMuNjQsMi4yLjY0czEuNjgtLjIyLDIuNDQtLjY2Yy43Ni0uNDUsMS4zLTEuMDUsMS42MS0xLjgxLjMyLS43Ny40OC0xLjg5LjQ4LTMuMzR2LTkuMTRoMi44OXYxNy4wNmgtMi41OVpNNTM4Ljg4LDc0Ny41NnYtMTcuMDZoMi41OXYyLjQ0YzEuMjYtMS44OCwzLjA3LTIuODEsNS40NC0yLjgxLDEuMDIsMCwxLjk2LjE5LDIuODMuNTYuODYuMzYsMS41MS44NSwxLjk0LDEuNDUuNDMuNTkuNzIsMS4zLjg5LDIuMTIuMTEuNTMuMTcsMS40Ny4xNywyLjgxdjEwLjQ4aC0yLjg5di0xMC4zOGMwLTEuMTgtLjExLTIuMDYtLjM0LTIuNjQtLjIyLS41OC0uNjEtMS4wNS0xLjE5LTEuMzktLjU3LS4zNS0xLjI0LS41My0yLjAyLS41My0xLjI0LDAtMi4zMS4zOS0zLjIsMS4xNy0uODkuNzgtMS4zMywyLjI3LTEuMzMsNC40NXY5LjMxaC0yLjg5Wk01NjguMjksNzQxLjMxbDIuODQuMzhjLS4zMSwxLjk2LTEuMTEsMy40OS0yLjM5LDQuNjEtMS4yNywxLjEtMi44NCwxLjY2LTQuNywxLjY2LTIuMzMsMC00LjIxLS43Ni01LjY0LTIuMjgtMS40Mi0xLjUzLTIuMTItMy43Mi0yLjEyLTYuNTgsMC0xLjgzLjMtMy40NC45MS00LjgzLjYxLTEuMzksMS41NS0yLjQyLDIuOC0zLjExczIuNjEtMS4wMyw0LjA4LTEuMDNjMS44NSwwLDMuMzcuNDcsNC41NSwxLjQxczEuOTMsMi4yNywyLjI1LDMuOThsLTIuOC40NGMtLjI3LTEuMTUtLjc1LTIuMDEtMS40NC0yLjU4LS42OC0uNTgtMS40OS0uODgtMi40NS0uODgtMS40NiwwLTIuNjUuNTItMy41NiwxLjU2LS45MSwxLjA0LTEuMzYsMi42OS0xLjM2LDQuOTVzLjQ0LDMuOTYsMS4zMSw1Yy44OSwxLjA0LDIuMDQsMS41NiwzLjQ1LDEuNTYsMS4xNCwwLDIuMDgtLjM1LDIuODQtMS4wNS43Ni0uNywxLjI0LTEuNzcsMS40NC0zLjIyWk01NzkuOTMsNzQ0Ljk4bC40MSwyLjU1Yy0uODEuMTctMS41NC4yNS0yLjE3LjI1LTEuMDUsMC0xLjg3LS4xNi0yLjQ1LS40OC0uNTctLjMzLS45OC0uNzctMS4yMi0xLjMxLS4yMy0uNTQtLjM0LTEuNjgtLjM0LTMuNDJ2LTkuODFoLTIuMTJ2LTIuMjVoMi4xMnYtNC4yMmwyLjg4LTEuNzN2NS45NWgyLjkxdjIuMjVoLTIuOTF2OS45OGMwLC44Mi4wNSwxLjM1LjE0LDEuNTkuMS4yMy4yNy40Mi41LjU2LjIzLjE0LjU2LjIuOTguMi4zMiwwLC43NS0uMDQsMS4yOC0uMTFaTTU4Mi43Nyw3MjcuMzR2LTMuMzNoMi44OXYzLjMzaC0yLjg5Wk01ODIuNzcsNzQ3LjU2di0xNy4wNmgyLjg5djE3LjA2aC0yLjg5Wk01ODguOTgsNzM5LjAzYzAtMy4xNi44OC01LjQ5LDIuNjItNy4wMiwxLjQ3LTEuMjYsMy4yNi0xLjg5LDUuMzgtMS44OSwyLjM0LDAsNC4yNi43Nyw1Ljc1LDIuMzEsMS40OSwxLjUzLDIuMjMsMy42NSwyLjIzLDYuMzYsMCwyLjItLjMzLDMuOTMtMSw1LjE5LS42NiwxLjI1LTEuNjEsMi4yMi0yLjg4LDIuOTItMS4yNS43LTIuNjIsMS4wNS00LjExLDEuMDUtMi4zOSwwLTQuMzItLjc3LTUuOC0yLjMtMS40Ny0xLjUzLTIuMi0zLjc0LTIuMi02LjYyWk01OTEuOTUsNzM5LjAzYzAsMi4xOS40NywzLjgzLDEuNDIsNC45Mi45NiwxLjA4LDIuMTYsMS42MiwzLjYxLDEuNjJzMi42MS0uNTUsMy41Ni0xLjY0Yy45Ni0xLjA5LDEuNDQtMi43NiwxLjQ0LTUsMC0yLjEtLjQ4LTMuNy0xLjQ0LTQuNzgtLjk2LTEuMDktMi4xNS0xLjY0LTMuNTYtMS42NHMtMi42NS41NC0zLjYxLDEuNjJjLS45NSwxLjA4LTEuNDIsMi43MS0xLjQyLDQuODlaTTYwOC4zNSw3NDcuNTZ2LTE3LjA2aDIuNTl2Mi40NGMxLjI2LTEuODgsMy4wNy0yLjgxLDUuNDQtMi44MSwxLjAyLDAsMS45Ni4xOSwyLjgzLjU2Ljg2LjM2LDEuNTEuODUsMS45NCwxLjQ1LjQzLjU5LjcyLDEuMy44OSwyLjEyLjExLjUzLjE3LDEuNDcuMTcsMi44MXYxMC40OGgtMi44OXYtMTAuMzhjMC0xLjE4LS4xMS0yLjA2LS4zNC0yLjY0LS4yMi0uNTgtLjYxLTEuMDUtMS4xOS0xLjM5LS41Ny0uMzUtMS4yNC0uNTMtMi4wMi0uNTMtMS4yNCwwLTIuMzEuMzktMy4yLDEuMTctLjg5Ljc4LTEuMzMsMi4yNy0xLjMzLDQuNDV2OS4zMWgtMi44OVpNNjI1LjQ5LDc0Mi40N2wyLjg2LS40NWMuMTYsMS4xNS42LDIuMDMsMS4zMywyLjY0Ljc0LjYxLDEuNzcuOTIsMy4wOC45MnMyLjMyLS4yNywyLjk1LS44MWMuNjUtLjU0Ljk3LTEuMTguOTctMS45MSwwLS42Ni0uMjgtMS4xNy0uODQtMS41NS0uNC0uMjUtMS4zOC0uNTgtMi45NS0uOTgtMi4xMi0uNTMtMy42LS45OS00LjQyLTEuMzgtLjgxLS40LTEuNDMtLjk0LTEuODYtMS42Mi0uNDItLjctLjYyLTEuNDYtLjYyLTIuMywwLS43Ni4xNy0xLjQ2LjUyLTIuMTEuMzQtLjY1LjgyLTEuMTgsMS40Mi0xLjYxLjQ1LS4zMywxLjA2LS42MSwxLjgzLS44NC43OC0uMjMsMS42MS0uMzQsMi41LS4zNCwxLjM0LDAsMi41Mi4xOSwzLjUzLjU4LDEuMDEuMzksMS43Ni45MSwyLjIzLDEuNTYuNDkuNjYuODIsMS41NCwxLDIuNjRsLTIuODMuMzljLS4xMi0uODktLjQ5LTEuNTctMS4xMS0yLjA2LS42MS0uNDktMS40OC0uNzMtMi42MS0uNzMtMS4zMywwLTIuMjkuMjItMi44Ni42Ni0uNTYuNDQtLjg0Ljk1LS44NCwxLjU1LDAsLjM4LjEyLjcxLjM2LDEsLjI0LjMxLjYxLjU3LDEuMTEuNzguMjkuMSwxLjE0LjM1LDIuNTUuNzMsMi4wNS41NCwzLjQ4Ljk5LDQuMjgsMS4zNC44MS4zNCwxLjQ1Ljg1LDEuOTEsMS41Mi40Ni42Ny42OSwxLjQ5LjY5LDIuNDdzLS4yOCwxLjg4LS44NCwyLjczYy0uNTYuODQtMS4zOCwxLjUtMi40NCwxLjk3LTEuMDUuNDctMi4yNS43LTMuNTkuNy0yLjIxLDAtMy45LS40Ni01LjA2LTEuMzgtMS4xNi0uOTMtMS45LTIuMy0yLjIyLTQuMTFaTTY1OC41NCw3NDQuOThsLjQxLDIuNTVjLS44MS4xNy0xLjU0LjI1LTIuMTcuMjUtMS4wNSwwLTEuODctLjE2LTIuNDUtLjQ4LS41Ny0uMzMtLjk4LS43Ny0xLjIyLTEuMzEtLjIzLS41NC0uMzQtMS42OC0uMzQtMy40MnYtOS44MWgtMi4xMnYtMi4yNWgyLjEydi00LjIybDIuODgtMS43M3Y1Ljk1aDIuOTF2Mi4yNWgtMi45MXY5Ljk4YzAsLjgyLjA1LDEuMzUuMTQsMS41OS4xLjIzLjI3LjQyLjUuNTYuMjMuMTQuNTYuMi45OC4yLjMyLDAsLjc1LS4wNCwxLjI4LS4xMVpNNjYwLjI5LDczOS4wM2MwLTMuMTYuODgtNS40OSwyLjYyLTcuMDIsMS40Ny0xLjI2LDMuMjYtMS44OSw1LjM4LTEuODksMi4zNCwwLDQuMjYuNzcsNS43NSwyLjMxLDEuNDksMS41MywyLjIzLDMuNjUsMi4yMyw2LjM2LDAsMi4yLS4zMywzLjkzLTEsNS4xOS0uNjYsMS4yNS0xLjYxLDIuMjItMi44OCwyLjkyLTEuMjUuNy0yLjYyLDEuMDUtNC4xMSwxLjA1LTIuMzksMC00LjMyLS43Ny01LjgtMi4zLTEuNDctMS41My0yLjItMy43NC0yLjItNi42MlpNNjYzLjI1LDczOS4wM2MwLDIuMTkuNDcsMy44MywxLjQyLDQuOTIuOTYsMS4wOCwyLjE2LDEuNjIsMy42MSwxLjYyczIuNjEtLjU1LDMuNTYtMS42NGMuOTYtMS4wOSwxLjQ0LTIuNzYsMS40NC01LDAtMi4xLS40OC0zLjctMS40NC00Ljc4LS45Ni0xLjA5LTIuMTUtMS42NC0zLjU2LTEuNjRzLTIuNjUuNTQtMy42MSwxLjYyYy0uOTUsMS4wOC0xLjQyLDIuNzEtMS40Miw0Ljg5WiIvPgogICAgICA8cGF0aCBkPSJNNDY0Ljc1LDc4NC40N2wuNDEsMi41NWMtLjgxLjE3LTEuNTQuMjUtMi4xNy4yNS0xLjA1LDAtMS44Ny0uMTYtMi40NS0uNDgtLjU3LS4zMy0uOTgtLjc3LTEuMjItMS4zMS0uMjMtLjU0LS4zNC0xLjY4LS4zNC0zLjQydi05LjgxaC0yLjEydi0yLjI1aDIuMTJ2LTQuMjJsMi44OC0xLjczdjUuOTVoMi45MXYyLjI1aC0yLjkxdjkuOThjMCwuODIuMDUsMS4zNS4xNCwxLjU5LjEuMjMuMjcuNDIuNS41Ni4yMy4xNC41Ni4yLjk4LjIuMzIsMCwuNzUtLjA0LDEuMjgtLjExWk00NjcuNTgsNzg3LjA0di0yMy41NWgyLjg5djguNDVjMS4zNC0xLjU2LDMuMDUtMi4zNCw1LjExLTIuMzQsMS4yNiwwLDIuMzUuMjUsMy4yOC43NS45NC40OSwxLjYsMS4xOCwyLDIuMDYuNDEuODguNjEsMi4xNS42MSwzLjgxdjEwLjgxaC0yLjg5di0xMC44MWMwLTEuNDQtLjMxLTIuNDgtLjk0LTMuMTQtLjYyLS42Ny0xLjUxLTEtMi42Ni0xLS44NiwwLTEuNjguMjItMi40NC42Ny0uNzUuNDQtMS4yOSwxLjA0LTEuNjEsMS44LS4zMS43Ni0uNDcsMS44MS0uNDcsMy4xNnY5LjMzaC0yLjg5Wk00OTcuNTQsNzgxLjU0bDIuOTguMzhjLS40NywxLjc1LTEuMzQsMy4xMS0yLjYyLDQuMDgtMS4yNy45Ni0yLjksMS40NC00Ljg4LDEuNDQtMi40OSwwLTQuNDctLjc3LTUuOTQtMi4zLTEuNDYtMS41NC0yLjE5LTMuNy0yLjE5LTYuNDhzLjc0LTUuMDksMi4yMi02LjY3LDMuNC0yLjM4LDUuNzUtMi4zOCw0LjE0Ljc4LDUuNTgsMi4zM2MxLjQ1LDEuNTUsMi4xNywzLjczLDIuMTcsNi41NSwwLC4xOCwwLC40NC0uMDIuNzhoLTEyLjcyYy4xMSwxLjg2LjY1LDMuMywxLjU5LDQuM3MyLjE0LDEuNSwzLjU2LDEuNWMxLjA2LDAsMS45Ny0uMjgsMi43Mi0uODMuNzUtLjU2LDEuMzQtMS40NiwxLjc4LTIuNjlaTTQ4OC4wNiw3NzYuODdoOS41MmMtLjEyLTEuNDMtLjQ5LTIuNS0xLjA5LTMuMjItLjkyLTEuMTEtMi4xMS0xLjY3LTMuNTgtMS42Ny0xLjMzLDAtMi40NS40NS0zLjM2LDEuMzQtLjkuODktMS4zOSwyLjA3LTEuNDgsMy41NVpNNTEyLjE0LDc4MS45NWwyLjg2LS40NWMuMTYsMS4xNS42LDIuMDMsMS4zMywyLjY0Ljc0LjYxLDEuNzcuOTIsMy4wOC45MnMyLjMyLS4yNywyLjk1LS44MWMuNjUtLjU0Ljk3LTEuMTguOTctMS45MSwwLS42Ni0uMjgtMS4xNy0uODQtMS41NS0uNC0uMjUtMS4zOC0uNTgtMi45NS0uOTgtMi4xMi0uNTMtMy42LS45OS00LjQyLTEuMzgtLjgxLS40LTEuNDMtLjk0LTEuODYtMS42Mi0uNDItLjctLjYyLTEuNDYtLjYyLTIuMywwLS43Ni4xNy0xLjQ2LjUyLTIuMTFzLjgyLTEuMTgsMS40Mi0xLjYxYy40NS0uMzMsMS4wNi0uNjEsMS44My0uODQuNzgtLjIzLDEuNjEtLjM0LDIuNS0uMzQsMS4zNCwwLDIuNTIuMTksMy41My41OHMxLjc2LjkxLDIuMjMsMS41NmMuNDkuNjYuODIsMS41NCwxLDIuNjRsLTIuODMuMzljLS4xMi0uODktLjQ5LTEuNTctMS4xMS0yLjA2cy0xLjQ4LS43My0yLjYxLS43M2MtMS4zMywwLTIuMjkuMjItMi44Ni42Ni0uNTYuNDQtLjg0Ljk1LS44NCwxLjU1LDAsLjM4LjEyLjcxLjM2LDEsLjI0LjMxLjYxLjU3LDEuMTEuNzguMjkuMSwxLjE0LjM1LDIuNTUuNzMsMi4wNS41NCwzLjQ4Ljk5LDQuMjgsMS4zNC44MS4zNCwxLjQ1Ljg1LDEuOTEsMS41MnMuNjksMS40OS42OSwyLjQ3LS4yOCwxLjg4LS44NCwyLjczYy0uNTYuODQtMS4zOCwxLjUtMi40NCwxLjk3LTEuMDUuNDctMi4yNS43LTMuNTkuNy0yLjIxLDAtMy45LS40Ni01LjA2LTEuMzgtMS4xNi0uOTMtMS45LTIuMy0yLjIyLTQuMTFaTTUyOS42Miw3OTMuNjFsLS4zMy0yLjdjLjY0LjE3LDEuMTkuMjUsMS42Ni4yNS42NSwwLDEuMTYtLjExLDEuNTUtLjMzLjM5LS4yMS43LS41MS45NC0uODkuMTktLjI5LjQ4LTEuMDEuODktMi4xNi4wNS0uMTYuMTQtLjM5LjI1LS43bC02LjQ3LTE3LjA5aDMuMTFsMy41NSw5Ljg5Yy40NywxLjI1Ljg5LDIuNTYsMS4yNSwzLjk0LjMyLTEuMzIuNzItMi42MSwxLjE5LTMuODhsMy42NC05Ljk1aDIuODlsLTYuNDgsMTcuMzZjLS43LDEuODYtMS4yNCwzLjE1LTEuNjIsMy44Ni0uNTEuOTYtMS4xLDEuNjYtMS43NywyLjA5LS42Ny40NS0xLjQ2LjY3LTIuMzguNjctLjU2LDAtMS4xOC0uMTItMS44Ni0uMzZaTTU0NS4wMyw3ODEuOTVsMi44Ni0uNDVjLjE2LDEuMTUuNiwyLjAzLDEuMzMsMi42NC43NC42MSwxLjc3LjkyLDMuMDguOTJzMi4zMi0uMjcsMi45NS0uODFjLjY1LS41NC45Ny0xLjE4Ljk3LTEuOTEsMC0uNjYtLjI4LTEuMTctLjg0LTEuNTUtLjQtLjI1LTEuMzgtLjU4LTIuOTUtLjk4LTIuMTItLjUzLTMuNi0uOTktNC40Mi0xLjM4LS44MS0uNC0xLjQzLS45NC0xLjg2LTEuNjItLjQyLS43LS42Mi0xLjQ2LS42Mi0yLjMsMC0uNzYuMTctMS40Ni41Mi0yLjExcy44Mi0xLjE4LDEuNDItMS42MWMuNDUtLjMzLDEuMDYtLjYxLDEuODMtLjg0Ljc4LS4yMywxLjYxLS4zNCwyLjUtLjM0LDEuMzQsMCwyLjUyLjE5LDMuNTMuNThzMS43Ni45MSwyLjIzLDEuNTZjLjQ5LjY2LjgyLDEuNTQsMSwyLjY0bC0yLjgzLjM5Yy0uMTItLjg5LS40OS0xLjU3LTEuMTEtMi4wNnMtMS40OC0uNzMtMi42MS0uNzNjLTEuMzMsMC0yLjI5LjIyLTIuODYuNjYtLjU2LjQ0LS44NC45NS0uODQsMS41NSwwLC4zOC4xMi43MS4zNiwxLC4yNC4zMS42MS41NywxLjExLjc4LjI5LjEsMS4xNC4zNSwyLjU1LjczLDIuMDUuNTQsMy40OC45OSw0LjI4LDEuMzQuODEuMzQsMS40NS44NSwxLjkxLDEuNTJzLjY5LDEuNDkuNjksMi40Ny0uMjgsMS44OC0uODQsMi43M2MtLjU2Ljg0LTEuMzgsMS41LTIuNDQsMS45Ny0xLjA1LjQ3LTIuMjUuNy0zLjU5LjctMi4yMSwwLTMuOS0uNDYtNS4wNi0xLjM4LTEuMTYtLjkzLTEuOS0yLjMtMi4yMi00LjExWk01NjguOTUsNzg0LjQ3bC40MSwyLjU1Yy0uODEuMTctMS41NC4yNS0yLjE3LjI1LTEuMDUsMC0xLjg3LS4xNi0yLjQ1LS40OC0uNTctLjMzLS45OC0uNzctMS4yMi0xLjMxLS4yMy0uNTQtLjM0LTEuNjgtLjM0LTMuNDJ2LTkuODFoLTIuMTJ2LTIuMjVoMi4xMnYtNC4yMmwyLjg4LTEuNzN2NS45NWgyLjkxdjIuMjVoLTIuOTF2OS45OGMwLC44Mi4wNSwxLjM1LjE0LDEuNTkuMS4yMy4yNy40Mi41LjU2LjIzLjE0LjU2LjIuOTguMi4zMiwwLC43NS0uMDQsMS4yOC0uMTFaTTU4My40NSw3ODEuNTRsMi45OC4zOGMtLjQ3LDEuNzUtMS4zNCwzLjExLTIuNjIsNC4wOC0xLjI3Ljk2LTIuOSwxLjQ0LTQuODgsMS40NC0yLjQ5LDAtNC40Ny0uNzctNS45NC0yLjMtMS40Ni0xLjU0LTIuMTktMy43LTIuMTktNi40OHMuNzQtNS4wOSwyLjIyLTYuNjcsMy40LTIuMzgsNS43NS0yLjM4LDQuMTQuNzgsNS41OCwyLjMzYzEuNDUsMS41NSwyLjE3LDMuNzMsMi4xNyw2LjU1LDAsLjE4LDAsLjQ0LS4wMi43OGgtMTIuNzJjLjExLDEuODYuNjUsMy4zLDEuNTksNC4zczIuMTQsMS41LDMuNTYsMS41YzEuMDYsMCwxLjk3LS4yOCwyLjcyLS44My43NS0uNTYsMS4zNC0xLjQ2LDEuNzgtMi42OVpNNTczLjk2LDc3Ni44N2g5LjUyYy0uMTItMS40My0uNDktMi41LTEuMDktMy4yMi0uOTItMS4xMS0yLjExLTEuNjctMy41OC0xLjY3LTEuMzMsMC0yLjQ1LjQ1LTMuMzYsMS4zNC0uOS44OS0xLjM5LDIuMDctMS40OCwzLjU1Wk01OTAuMDcsNzg3LjA0di0xNy4wNmgyLjU4djIuNDFjLjU0LS44NCwxLjI2LTEuNTIsMi4xNC0yLjAyLjg5LS41MSwxLjktLjc3LDMuMDMtLjc3LDEuMjYsMCwyLjMuMjcsMy4xMS44LjgxLjUyLDEuMzksMS4yNSwxLjcyLDIuMTksMS4zNC0xLjk5LDMuMS0yLjk4LDUuMjctMi45OCwxLjY5LDAsMi45OC40NywzLjg5LDEuNDEuOTIuOTQsMS4zOCwyLjM4LDEuMzgsNC4zM3YxMS43aC0yLjg4di0xMC43NWMwLTEuMTYtLjA5LTEuOTgtLjI4LTIuNDgtLjE5LS41MS0uNTMtLjkyLTEuMDMtMS4yMy0uNDktLjMxLTEuMDYtLjQ3LTEuNzItLjQ3LTEuMjEsMC0yLjIxLjQtMywxLjItLjc5Ljc5LTEuMTksMi4wNy0xLjE5LDMuODN2OS45MWgtMi44OXYtMTEuMDhjMC0xLjI5LS4yMy0yLjI2LS43LTIuODktLjQ3LS42NS0xLjI0LS45Ny0yLjMxLS45Ny0uODEsMC0xLjU3LjIxLTIuMjcuNjQtLjY5LjQzLTEuMTksMS4wNi0xLjUsMS44OS0uMy44Mi0uNDUsMi4wMS0uNDUsMy41NnY4Ljg0aC0yLjg5WiIvPgogICAgICA8cGF0aCBjbGFzcz0ic3Q4IiBkPSJNMTk0LjQyLDc4MS4yMXYtMTM4LjE0aDc0LjI0Ii8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDIiIGQ9Ik0xOTQuNDIsNzgxLjIxdi0xMzguMTRoNDIuNSIvPgogICAgICA8cGF0aCBjbGFzcz0ic3Q5IiBkPSJNMjM2LjkyLDY1MS44MWwyNC04Ljc0LTI0LTguNzR2MTcuNDdaIi8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDgiIGQ9Ik04NzYuOTcsNzgxLjIxdi0xMzguMTRoLTc3LjkyIi8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDIiIGQ9Ik04NzYuOTcsNzgxLjIxdi0xMzguMTRoLTQ2LjE5Ii8+CiAgICAgIDxwYXRoIGNsYXNzPSJzdDkiIGQ9Ik04MzAuNzgsNjM0LjM0bC0yNCw4Ljc0LDI0LDguNzR2LTE3LjQ3WiIvPgogICAgPC9nPgogIDwvZz4KPC9zdmc+" alt="App Functions architecture"></div>
+      <div style="display:flex;flex-direction:column;gap:10px;justify-content:center">
+        <div class="card">
+          <h3><span class="dot b-grn"></span>① 선언 &amp; 등록 — 제공하는 쪽</h3>
+          <p>내 앱이 <code>@AppFunction</code>으로 선언한 함수가, 설치 시점에 <b>AppFunctionManager</b>(플랫폼)에 메타데이터로 색인됩니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-blue"></span>② Retrieve — 조회하는 쪽</h3>
+          <p>에이전트 앱이 “지금 이 기기에서 부를 수 있는 함수 목록”을 플랫폼에 요청합니다. 앱 이름을 미리 알 필요가 없습니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-red"></span>③ Select &amp; Execute</h3>
+          <p>모델이 사용자의 말과 함수 설명을 매칭해 하나를 고르고, 플랫폼을 통해 <b>내 앱 프로세스에서</b> 실행합니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">14</div>
+</section>
+
+<!-- 14 · 양쪽 역할 -->
+<section class="slide">
+  <div class="field"><b class="f5" style="opacity:.11"></b><b class="f3" style="opacity:.11"></b></div>
+  <div class="eyebrow">Section 02 · How it works</div>
+  <h2 class="t">두 개의 역할, 두 개의 관문<small>오늘 우리가 만드는 것은 오른쪽 <b>제공하는 쪽</b>입니다.</small></h2>
+  <div class="body">
+    <div class="grid2" style="height:100%">
+      <div class="card" style="display:flex;flex-direction:column;border-color:rgba(66,133,244,.35)">
+        <span class="tag blue">CONSUMER</span>
+        <h3 style="margin-top:14px">조회하는 쪽 — 에이전트 · 시스템 앱</h3>
+        <p>아무 앱이나 다른 앱의 기능을 마음대로 부를 수 있으면 안 되겠죠. 그래서 <b>권한이 관문</b>입니다.</p>
+        <div class="code sm" style="margin-top:16px"><span class="an">&lt;uses-permission</span> android:name=
+    <span class="st">"android.permission.EXECUTE_APP_FUNCTIONS"</span> <span class="an">/&gt;</span></div>
+        <ul class="sub" style="margin-top:16px">
+          <li>이 권한이 있어야 함수 목록 조회 · 실행이 가능합니다</li>
+          <li>일반 앱은 받을 수 없는 <b>제한된 권한</b>입니다 (Gemini 같은 시스템 에이전트용)</li>
+          <li>실습에서는 공식 <code>agent</code> 앱을 <code>run_privileged.sh</code>로 권한을 부여해 실행합니다</li>
+        </ul>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column;border-color:rgba(52,168,83,.4)">
+        <span class="tag grn">PROVIDER · 오늘의 주제</span>
+        <h3 style="margin-top:14px">제공하는 쪽 — 우리 앱의 서비스</h3>
+        <p><code>androidx.appfunctions</code> 라이브러리의 <b>어노테이션</b>만으로 기능을 공개합니다.</p>
+        <ul class="sub" style="margin-top:16px">
+          <li>Kotlin 함수 + 어노테이션 → KSP가 컴파일 타임에 처리</li>
+          <li>메타데이터 XML과 호출 디스패처 코드가 <b>자동 생성</b>됩니다</li>
+          <li>리플렉션 없음 · 런타임 등록 없음 → 앱 설치만으로 시스템이 인지</li>
+        </ul>
+        <div class="note" style="margin-top:auto">잠시 뒤 <b>어노테이션 프로세싱으로 생성되는 XML</b>도 직접 열어봅니다.</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">15</div>
+</section>
+
+<!-- 15 · 어노테이션 1 -->
+<section class="slide">
+  <div class="field"><b class="f2" style="opacity:.11"></b><b class="f4" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 02 · Annotations</div>
+  <h2 class="t"><code style="color:var(--purple)">@AppFunctionServiceEntryPoint</code><small>App Function들을 담을 서비스를 선언합니다. — ChatApp 샘플 실제 코드</small></h2>
+  <div class="body">
+    <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:22px;height:100%">
+      <div class="code sm"><span class="an">@RequiresApi</span>(<span class="st">36</span>)
+<span class="an">@AndroidEntryPoint</span>                              <span class="cm">// Hilt 주입 사용</span>
+<span class="an">@AppFunctionServiceEntryPoint</span>(
+    serviceName = <span class="st">"ChatAppFunctionService"</span>,     <span class="cm">// 생성될 Service 클래스 이름</span>
+    appFunctionXmlFileName = <span class="st">"chat_app_function_service"</span>,
+)
+<span class="kw">abstract class</span> <span class="ty">BaseChatAppFunctionService</span> : <span class="ty">AppFunctionService</span>() {
+
+    <span class="an">@Inject</span> <span class="kw">lateinit var</span> messageRepository: <span class="ty">MessageRepository</span>
+    <span class="an">@Inject</span> <span class="kw">lateinit var</span> recipientsRepository: <span class="ty">RecipientsRepository</span>
+    <span class="an">@Inject</span> <span class="kw">lateinit var</span> callManager: <span class="ty">CallManager</span>
+
+    <span class="cm">// ... 여기에 @AppFunction 함수들이 들어갑니다</span>
+}</div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <h3><span class="dot b-blue"></span>왜 abstract 인가요?</h3>
+          <p>KSP가 이 클래스를 상속한 <b>구현 서비스</b>(<code>ChatAppFunctionService</code>)를 생성합니다. 우리는 비즈니스 로직만 씁니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-grn"></span>DI를 그대로 쓸 수 있습니다</h3>
+          <p><code>@AndroidEntryPoint</code> + <code>@Inject</code> — 기존 Repository 계층을 그대로 재사용합니다. App Function을 위해 아키텍처를 바꿀 필요가 없습니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-yel"></span>appFunctionXmlFileName</h3>
+          <p>생성될 메타데이터 XML 파일명. Manifest의 <code>android.app.appfunctions.v2</code> 값과 짝을 맞춥니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">16</div>
+</section>
+
+<!-- 16 · 어노테이션 2 : @AppFunction -->
+<section class="slide">
+  <div class="field"><b class="f1" style="opacity:.11"></b><b class="f5" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 02 · Annotations</div>
+  <h2 class="t"><code style="color:var(--purple)">@AppFunction</code> · <code style="color:var(--purple)">isDescribedByKDoc</code><small>KDoc이 곧 LLM에게 전달되는 함수 명세가 됩니다.</small></h2>
+  <div class="body">
+    <div style="display:grid;grid-template-columns:1.3fr .7fr;gap:22px;height:100%">
+      <div class="code sm" style="line-height:1.54"><span class="cm">/**
+ * Send a text message with optional image attachments to an individual contact or group.
+ * Required workflow: Call "searchContacts" first to obtain a valid endpointValue.
+ *
+ * @param endpointValue The unique identifier for the recipient or group.
+ * @param messageBody   The text content of the message. Cannot be empty or blank.
+ * @param imageUris     Optional list of image URIs to attach to the message.
+ * @return A human-readable message indicating the error or confirmation.
+ * @throws AppFunctionInvalidArgumentException If messageBody is blank. If thrown,
+ *         ask the user to provide the message content to send.
+ * @throws AppFunctionElementNotFoundException If no contact matches endpointValue.
+ *         If thrown, call "searchContacts" to find the correct ID.
+ */</span>
+<span class="an">@AppFunction</span>(isDescribedByKDoc = <span class="st">true</span>)
+<span class="kw">suspend fun</span> <span class="ty">sendMessage</span>(
+    endpointValue: <span class="ty">String</span>,
+    messageBody: <span class="ty">String</span>,
+    imageUris: <span class="ty">List</span>&lt;<span class="ty">Uri</span>&gt;? = <span class="st">null</span>,
+): <span class="ty">String</span> {
+    <span class="kw">if</span> (messageBody.isBlank())
+        <span class="kw">throw</span> <span class="ty">AppFunctionInvalidArgumentException</span>(<span class="st">"Message body cannot be empty"</span>)
+    <span class="cm">// ...</span>
+    <span class="kw">return</span> <span class="st">"Message sent to: $displayName."</span>
+}</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="note"><b>주석을 LLM에게 쓴다고 생각하세요.</b><br>“이 함수를 언제 부르는지”, “실패하면 사용자에게 뭐라고 물어봐야 하는지”까지 적습니다.</div>
+        <div class="card">
+          <h3><span class="dot b-blue"></span>워크플로를 명시</h3>
+          <p><i>“Call searchContacts first”</i> — 함수 간 호출 순서를 문장으로 알려주면 모델이 그 순서를 지킵니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-red"></span>예외도 복구 지시로</h3>
+          <p><code>@throws</code>에 <i>“If thrown, ask the user to…”</i>를 적으면, 실패가 대화의 다음 질문으로 이어집니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-yel"></span>값 제약</h3>
+          <p><code>@AppFunctionStringValueConstraint(enumValues = [...])</code>로 허용 값을 못 박을 수 있습니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">17</div>
+</section>
+
+<!-- 17 · 어노테이션 3 : Serializable -->
+<section class="slide">
+  <div class="field"><b class="f3" style="opacity:.11"></b><b class="f2" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 02 · Annotations</div>
+  <h2 class="t"><code style="color:var(--purple)">@AppFunctionSerializable</code><small>파라미터·반환 타입으로 쓸 커스텀 데이터 클래스를 등록합니다.</small></h2>
+  <div class="body">
+    <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:22px;height:100%">
+      <div class="code sm"><span class="cm">/** Represents a result from a contact or group search. */</span>
+<span class="an">@AppFunctionSerializable</span>(isDescribedByKDoc = <span class="st">true</span>)
+<span class="kw">data class</span> <span class="ty">ContactSearchResult</span>(
+    <span class="cm">/** The human-readable name of the contact or group. */</span>
+    <span class="kw">val</span> contactDisplayName: <span class="ty">String</span>,
+    <span class="cm">/** The type of the found entity, either "INDIVIDUAL" or "GROUP". */</span>
+    <span class="kw">val</span> contactType: <span class="ty">String</span>,
+    <span class="cm">/** The unique identifier of the endpoint. */</span>
+    <span class="kw">val</span> endpointValue: <span class="ty">String</span>,
+    <span class="cm">/** The human-readable label/display name of the endpoint. */</span>
+    <span class="kw">val</span> endpointDisplayName: <span class="ty">String</span>,
+)
+
+<span class="cm">/** Represents the search results for a specific chat endpoint. */</span>
+<span class="an">@AppFunctionSerializable</span>(isDescribedByKDoc = <span class="st">true</span>)
+<span class="kw">data class</span> <span class="ty">MessagesSearchResult</span>(
+    <span class="kw">val</span> endpointValue: <span class="ty">String</span>,
+    <span class="kw">val</span> messages: <span class="ty">List</span>&lt;<span class="ty">Message</span>&gt;,   <span class="cm">// 중첩도 가능</span>
+)</div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <h3><span class="dot b-blue"></span>프로퍼티 KDoc도 읽습니다</h3>
+          <p>각 필드 위 주석이 그대로 필드 설명으로 XML에 들어갑니다. 모델이 값을 잘못 채우는 걸 막아줍니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-grn"></span>지원 타입</h3>
+          <ul class="sub" style="margin-top:8px">
+            <li>기본형: <code>String Int Long Double Float Boolean</code></li>
+            <li><code>List&lt;T&gt;</code>, nullable, 기본값</li>
+            <li><code>Uri</code>, <code>PendingIntent</code> 같은 Android 타입</li>
+            <li>다른 <code>@AppFunctionSerializable</code> 중첩</li>
+          </ul>
+        </div>
+        <div class="note"><b>PendingIntent 반환</b> · ChatApp의 <code>makeCall</code>은 <code>PendingIntent</code>를 돌려줍니다. 에이전트가 “여기서부터는 앱 화면에서 이어가세요”라고 넘길 수 있습니다.</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">18</div>
+</section>
+
+<!-- 18 · 생성된 XML -->
+<section class="slide">
+  <div class="field"><b class="f4" style="opacity:.11"></b><b class="f1" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 02 · Annotations</div>
+  <h2 class="t">KSP가 만들어내는 것<small>주석이 실제로 어떤 메타데이터가 되는지 확인해봅시다.</small></h2>
+  <div class="body">
+    <div style="display:flex;flex-direction:column;gap:16px;height:100%">
+      <div class="flow">
+        <div class="n">Kotlin 함수 + KDoc</div><div class="a">→</div>
+        <div class="n">KSP (appfunctions-compiler)</div><div class="a">→</div>
+        <div class="n">assets/chat_app_function_service.xml</div><div class="a">→</div>
+        <div class="n">AppFunctionManager 등록</div>
+      </div>
+      <div class="code xs" style="flex:1;overflow:hidden">shared/build/generated/ksp/debug/resources/assets/<span class="st">chat_app_function_service.xml</span>
+
+<span class="an">&lt;appfunctions&gt;</span>
+  <span class="an">&lt;appfunction&gt;</span>
+    <span class="an">&lt;id&gt;</span>com.example.chatapp.appfunctions.BaseChatAppFunctionService<span class="fl">#searchContacts</span><span class="an">&lt;/id&gt;</span>
+    <span class="an">&lt;enabledByDefault&gt;</span>true<span class="an">&lt;/enabledByDefault&gt;</span>
+    <span class="an">&lt;description&gt;</span><span class="st">Search for message recipients or chat groups by name or email.</span>
+<span class="st">      Required workflow: Call this before "send" or "makeCall" to obtain a valid endpointValue.</span><span class="an">&lt;/description&gt;</span>   <span class="cm">← KDoc 본문</span>
+    <span class="an">&lt;parameters&gt;</span>
+      <span class="an">&lt;dataTypeMetadata&gt;&lt;isNullable&gt;</span>false<span class="an">&lt;/isNullable&gt;&lt;type&gt;</span>8<span class="an">&lt;/type&gt;&lt;/dataTypeMetadata&gt;</span>
+      <span class="an">&lt;name&gt;</span>query<span class="an">&lt;/name&gt;</span>  <span class="an">&lt;isRequired&gt;</span>true<span class="an">&lt;/isRequired&gt;</span>
+      <span class="an">&lt;description&gt;</span><span class="st">Search string for contact name, email, or group name.</span><span class="an">&lt;/description&gt;</span>          <span class="cm">← @param</span>
+    <span class="an">&lt;/parameters&gt;</span>
+    <span class="an">&lt;parameters&gt;</span>
+      <span class="an">&lt;dataTypeMetadata&gt;</span>
+        <span class="an">&lt;enumValues&gt;</span>INDIVIDUAL<span class="an">&lt;/enumValues&gt;&lt;enumValues&gt;</span>GROUP<span class="an">&lt;/enumValues&gt;&lt;enumValues&gt;</span>ANY<span class="an">&lt;/enumValues&gt;</span>  <span class="cm">← @AppFunctionStringValueConstraint</span>
+      <span class="an">&lt;/dataTypeMetadata&gt;</span>
+      <span class="an">&lt;name&gt;</span>contactType<span class="an">&lt;/name&gt;</span>
+    <span class="an">&lt;/parameters&gt;</span>
+    <span class="an">&lt;response&gt;</span> ... <span class="an">&lt;dataTypeReference&gt;</span>com.example.chatapp.appfunctions.ContactSearchResult<span class="an">&lt;/dataTypeReference&gt;</span> ... <span class="an">&lt;/response&gt;</span>
+  <span class="an">&lt;/appfunction&gt;</span>
+<span class="an">&lt;/appfunctions&gt;</span>       <span class="cm">// ChatApp 기준 총 374줄 · 5개 함수</span></div>
+    </div>
+  </div>
+  <div class="pageno">19</div>
+</section>
+
+<!-- 19 · 추가 과정 : 의존성 -->
+<section class="slide">
+  <div class="field"><b class="f1" style="opacity:.12"></b><b class="f3" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 02 · Add to your app</div>
+  <h2 class="t">내 프로젝트에 추가하기 ① 빌드 설정</h2>
+  <div class="body">
+    <div style="display:grid;grid-template-columns:.85fr 1.15fr;gap:22px;height:100%">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <h3><span class="dot b-red"></span>전제 조건</h3>
+          <dl class="kv" style="margin-top:12px">
+            <dt>compileSdk</dt><dd>36 이상</dd>
+            <dt>디바이스</dt><dd>Android 16 (API 36) 이상</dd>
+            <dt>KSP</dt><dd>Kotlin Symbol Processing 플러그인 필요</dd>
+          </dl>
+        </div>
+        <div class="note warn"><b>가장 흔한 실수</b><br>API 35 에뮬레이터에서 실행하면 앱은 설치되지만 함수가 <b>아예 노출되지 않습니다</b>. 오류도 나지 않아서 찾기 어렵습니다.</div>
+        <div class="card" style="margin-top:auto">
+          <h3><span class="dot b-grn"></span>버전</h3>
+          <p>세션 기준 <code>1.0.0-alpha10</code> — alpha 단계라 API가 바뀔 수 있습니다. 샘플과 버전을 맞춰주세요.</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="code sm"><span class="cm">// build.gradle.kts</span>
+<span class="kw">plugins</span> {
+    <span class="kw">id</span>(<span class="st">"com.google.devtools.ksp"</span>)
+}
+
+<span class="kw">android</span> {
+    compileSdk = <span class="st">36</span>          <span class="cm">// 36 이상 필수</span>
+}
+
+<span class="kw">dependencies</span> {
+    implementation(<span class="st">"androidx.appfunctions:appfunctions:1.0.0-alpha10"</span>)
+
+    <span class="cm">// Kotlin 소스를 쓴다면 KSP로 컴파일러를 추가</span>
+    ksp(<span class="st">"androidx.appfunctions:appfunctions-compiler:1.0.0-alpha10"</span>)
+}</div>
+        <div class="card">
+          <h3><span class="dot b-blue"></span>멀티 모듈이라면</h3>
+          <p>함수를 여러 모듈에 나눠 두었다면, 앱 모듈에서 이를 합쳐주는 <b>aggregate</b> 단계가 필요합니다. ChatApp 샘플은 <code>appfunctions.aggregateAppFunctions</code> 컨벤션 플러그인으로 처리합니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">20</div>
+</section>
+
+<!-- 20 · 추가 과정 : Manifest -->
+<section class="slide">
+  <div class="field"><b class="f2" style="opacity:.11"></b><b class="f4" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 02 · Add to your app</div>
+  <h2 class="t">내 프로젝트에 추가하기 ② 서비스 선언<small>KSP가 생성한 Service를 Manifest에 등록해야 시스템이 발견합니다.</small></h2>
+  <div class="body">
+    <div style="display:grid;grid-template-columns:1.15fr .85fr;gap:22px;height:100%">
+      <div class="code sm"><span class="cm">&lt;!-- AndroidManifest.xml --&gt;</span>
+<span class="an">&lt;service</span>
+    android:name=<span class="st">"com.example.chatapp.appfunctions.ChatAppFunctionService"</span>
+    android:permission=<span class="st">"android.permission.BIND_APP_FUNCTION_SERVICE"</span>
+    android:exported=<span class="st">"true"</span>
+    tools:targetApi=<span class="st">"36"</span><span class="an">&gt;</span>
+
+    <span class="an">&lt;property</span>
+        android:name=<span class="st">"android.app.appfunctions.schema"</span>
+        android:value=<span class="st">"app_functions_schema.xsd"</span> <span class="an">/&gt;</span>
+
+    <span class="an">&lt;property</span>
+        android:name=<span class="st">"android.app.appfunctions.v2"</span>
+        android:value=<span class="st">"chat_app_function_service.xml"</span> <span class="an">/&gt;</span>   <span class="cm">← 생성된 XML</span>
+
+    <span class="an">&lt;intent-filter&gt;</span>
+        <span class="an">&lt;action</span> android:name=<span class="st">"android.app.appfunctions.AppFunctionService"</span> <span class="an">/&gt;</span>
+    <span class="an">&lt;/intent-filter&gt;</span>
+<span class="an">&lt;/service&gt;</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="card">
+          <h3><span class="dot b-red"></span>exported = true 인데 안전한가요?</h3>
+          <p>네. <code>BIND_APP_FUNCTION_SERVICE</code> 권한을 가진 <b>시스템만</b> 바인딩할 수 있습니다. 일반 앱은 접근할 수 없습니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-blue"></span>android:name</h3>
+          <p><code>@AppFunctionServiceEntryPoint(serviceName = …)</code>에 적은 이름으로 클래스가 생성됩니다. 그 이름을 그대로 씁니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-yel"></span>appfunctions.v2</h3>
+          <p><code>appFunctionXmlFileName</code>에 적은 파일명 + <code>.xml</code>. 두 값이 어긋나면 함수가 노출되지 않습니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">21</div>
+</section>
+
+<!-- 21 · 팁 1, 2 -->
+<section class="slide">
+  <div class="field"><b class="f5" style="opacity:.11"></b><b class="f3" style="opacity:.11"></b></div>
+  <div class="eyebrow">Section 02 · Implementation tips</div>
+  <h2 class="t">구현할 때 꼭 기억할 두 가지</h2>
+  <div class="body">
+    <div class="grid2" style="height:100%">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card" style="border-color:rgba(66,133,244,.35)">
+          <span class="tag blue">TIP #1</span>
+          <h3 style="margin-top:12px">suspend 함수를 쓸 수 있습니다</h3>
+          <p>App Function은 기본적으로 <b>UI 스레드에서 실행</b>됩니다. 네트워크·DB 작업이 있다면 반드시 <code>suspend</code>로 선언하고 적절한 디스패처로 전환하세요.</p>
+        </div>
+        <div class="code sm"><span class="an">@AppFunction</span>(isDescribedByKDoc = <span class="st">true</span>)
+<span class="kw">suspend fun</span> <span class="ty">searchMessages</span>(query: <span class="ty">String</span>): <span class="ty">List</span>&lt;<span class="ty">MessagesSearchResult</span>&gt; =
+    <span class="kw">withContext</span>(<span class="ty">Dispatchers</span>.IO) {
+        repository.search(query)     <span class="cm">// 무거운 작업은 여기서</span>
+    }</div>
+        <div class="note warn"><b>주의</b> · 오래 걸리는 작업은 타임아웃될 수 있습니다. 즉시 <code>PendingIntent</code>를 돌려주고 나머지는 앱 화면에서 이어가는 패턴도 고려하세요.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card" style="border-color:rgba(52,168,83,.4)">
+          <span class="tag grn">TIP #2</span>
+          <h3 style="margin-top:12px">노출 여부를 런타임에 제어할 수 있습니다</h3>
+          <p>로그인하지 않은 사용자, 무료 플랜, 아직 준비 중인 기능 — 상황에 따라 특정 함수만 숨길 수 있습니다.</p>
+        </div>
+        <div class="code sm"><span class="kw">val</span> manager = <span class="ty">AppFunctionManager</span>.getInstance(context)
+
+manager?.setAppFunctionEnabled(
+    functionId = <span class="st">"…BaseChatAppFunctionService#makeCall"</span>,
+    newEnabledState = <span class="ty">AppFunctionManager</span>.APP_FUNCTION_STATE_DISABLED,
+)
+
+<span class="cm">// STATE_DEFAULT(0) — XML의 enabledByDefault 값을 따름</span>
+<span class="cm">// STATE_ENABLED(1) / STATE_DISABLED(2) — 명시적 재정의</span>
+
+<span class="kw">val</span> enabled = manager?.isAppFunctionEnabled(functionId)</div>
+        <div class="note">기본값은 <code>@AppFunction</code> 선언 시점에 XML의 <code>&lt;enabledByDefault&gt;</code>로 굳고, 이 API는 그 위에 사용자/앱 상태별 <b>재정의</b>를 얹습니다.</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">22</div>
+</section>
+
+<!-- 22 · adb 검증 -->
+<section class="slide">
+  <div class="field"><b class="f1" style="opacity:.12"></b><b class="f4" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 02 · Verify</div>
+  <h2 class="t">통합 확인 <code style="font-size:.72em">adb shell cmd app_function</code><small>앱을 설치한 뒤, 시스템이 내 함수를 실제로 부를 수 있는지 확인합니다.</small></h2>
+  <div class="body">
+    <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:22px;height:100%">
+      <div class="term">
+        <div class="term-bar"><i class="b-red"></i><i class="b-yel"></i><i class="b-grn"></i><span>adb</span></div>
+        <div class="term-body sm"><span class="cm"># 메시지 전송 함수를 시스템 에이전트처럼 직접 실행</span>
+<span class="pr">$</span> <span class="kw">adb shell</span> <span class="st">"cmd app_function execute-app-function \
+    --package com.example.chatapp \
+    --function 'com.example.chatapp.appfunctions.\
+                BaseChatAppFunctionService#sendMessage' \
+    --parameters '{\"endpointValue\": \"1\",
+                   \"messageBody\": \"Hello Alice!\"}'"</span>
+
+<span class="cm"># 연락처 검색</span>
+<span class="pr">$</span> <span class="kw">adb shell</span> <span class="st">"cmd app_function execute-app-function \
+    --package com.example.chatapp \
+    --function '…#searchContacts' \
+    --parameters '{\"query\": \"Alice\", \"contactType\": \"INDIVIDUAL\"}'"</span>
+
+<span class="cm"># 에이전트 허용목록 캐시 비우기 (함수가 안 보일 때)</span>
+<span class="pr">$</span> <span class="kw">adb shell</span> <span class="kw">cmd app_function</span> <span class="st">purge-allowlist-cache</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;justify-content:center">
+        <div class="card" style="border-color:rgba(52,168,83,.4)">
+          <h3><span class="dot b-grn"></span>이걸로 확인되는 것</h3>
+          <ul class="sub" style="margin-top:10px">
+            <li>서비스가 Manifest에 제대로 등록됐는지</li>
+            <li>파라미터 직렬화가 맞는지</li>
+            <li>함수 본문이 기대대로 동작하는지</li>
+          </ul>
+        </div>
+        <div class="card" style="border-color:rgba(234,67,53,.35)">
+          <h3><span class="dot b-red"></span>이걸로 확인되지 <b>않는</b> 것</h3>
+          <p>이 명령은 <b>내가 이미 스펙을 알고</b> 파라미터를 직접 채워 넣는 방식입니다.</p>
+          <p style="margin-top:10px">우리가 진짜 원하는 건 <b>Gemini 같은 에이전트가 내 함수를 스스로 발견해서</b>, 사용자의 한 문장으로 여러 앱을 넘나드는 워크플로를 수행하는 것입니다.</p>
+        </div>
+        <div class="note"><b>그래서 다음 단계</b> · 공식 <code>agent</code> 앱으로 “진짜 에이전트가 부르는” 경로를 확인합니다.</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">23</div>
+</section>
+
+<!-- 23 · SECTION 3 -->
+<section class="slide sec">
+  <div class="field"><b class="f3"></b><b class="f1"></b><b class="f4"></b></div>
+  <div class="num">SECTION 03</div>
+  <h2>App Functions 실습</h2>
+  <div class="lead">이제 직접 만들어봅니다. 동작하지 않아도 괜찮습니다 —<br><b style="color:#81C995">무엇을 에이전트에게 열어줄지</b> 설계해보는 게 오늘의 목표입니다.</div>
+  <div class="bar"></div>
+  <div class="pageno">24</div>
+</section>
+
+<!-- 24 · 실습 순서 -->
+<section class="slide">
+  <div class="field"><b class="f2" style="opacity:.11"></b><b class="f3" style="opacity:.11"></b></div>
+  <div class="eyebrow">Section 03 · Hands-on</div>
+  <h2 class="t">실습 순서</h2>
+  <div class="body">
+    <div class="grid3" style="height:100%">
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag blue">STEP 1 · 따라하기</span>
+        <h3 style="margin-top:14px">공식 샘플로<br>호출 체험하기</h3>
+        <p>Agent 앱으로 ChatApp의 <code>sendMessage</code> App Function을 호출해봅니다.</p>
+        <div class="code xs" style="margin-top:14px">github.com/android/appfunctions</div>
+        <ul class="sub" style="margin-top:14px">
+          <li><code>ChatApp</code> — 함수를 제공하는 앱</li>
+          <li><code>agent</code> — 함수를 호출하는 앱</li>
+          <li>두 프로젝트를 각각 열어 빌드</li>
+        </ul>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag red">STEP 2 · 만들기</span>
+        <h3 style="margin-top:14px">본인 프로젝트에<br>자유롭게 구현</h3>
+        <p>내 앱에서 “사용자가 한 문장으로 시킬 만한 행동” 하나를 골라 App Function으로 열어봅니다.</p>
+        <div class="note" style="margin-top:14px;font-size:14px"><b>팁!</b> Android 공식 App Functions <b>skill</b>이 존재합니다. AI 도구에 물려두면 보일러플레이트를 대신 써줍니다.</div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag grn">STEP 3 · 나누기</span>
+        <h3 style="margin-top:14px">희망자 발표<br>&amp; 시상 🏆</h3>
+        <p><b>동작하지 않아도 됩니다.</b> 어떤 App Function을 설계했는지 보여주기만 해도 충분합니다.</p>
+        <div style="margin-top:auto;padding-top:14px;border-top:1px solid var(--line);font-size:14.5px;line-height:1.6">
+          발표자 중 <b>추첨</b>을 통해<br><b style="color:#C5221F">《Jetpack Compose 메커니즘》</b> 신간 도서를 드립니다.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">25</div>
+</section>
+
+<!-- 25 · STEP1 상세 -->
+<section class="slide">
+  <div class="field"><b class="f1" style="opacity:.12"></b><b class="f5" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 03 · Step 1</div>
+  <h2 class="t">공식 샘플 실행하기<small>ChatApp(제공) ↔ Testing Agent(호출) 두 앱을 함께 띄웁니다.</small></h2>
+  <div class="body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;height:100%">
+      <div class="term">
+        <div class="term-bar"><i class="b-red"></i><i class="b-yel"></i><i class="b-grn"></i><span>hands-on</span></div>
+        <div class="term-body sm"><span class="cm"># 1. 공식 샘플 저장소 클론</span>
+<span class="pr">$</span> <span class="kw">git clone</span> <span class="st">https://github.com/android/appfunctions.git</span>
+<span class="pr">$</span> <span class="kw">cd</span> appfunctions
+
+<span class="cm"># 2. 에뮬레이터 실행 (섹션 1에서 만든 것)</span>
+<span class="pr">$</span> <span class="kw">android emulator start</span> <span class="st">medium_phone</span>
+
+<span class="cm"># 3. ChatApp 설치 — Android Studio로 열어 Run 'app'</span>
+<span class="pr">$</span> <span class="kw">cd</span> ChatApp
+
+<span class="cm"># 4. Testing Agent를 권한과 함께 실행</span>
+<span class="pr">$</span> <span class="kw">cd</span> ../agent
+<span class="pr">$</span> ./<span class="kw">run_privileged.sh</span> <span class="fl">--build</span>
+
+<span class="cm">#    Gemini로 자연어 테스트까지 하려면</span>
+<span class="pr">$</span> ./<span class="kw">run_privileged.sh</span> <span class="fl">--build --flavor</span> retail <span class="fl">--api-key</span> <span class="st">$KEY</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;justify-content:center">
+        <div class="card">
+          <h3><span class="dot b-blue"></span>Agent 앱이 하는 일</h3>
+          <p>플랫폼에 등록된 App Function 목록을 조회하고, <b>수동 입력</b> 또는 <b>LLM 에이전트</b> 두 방식으로 실행해봅니다. 통합 문제 진단(troubleshoot) 기능도 있습니다.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-yel"></span>왜 privileged 실행이 필요한가요?</h3>
+          <p><code>EXECUTE_APP_FUNCTIONS</code>는 일반 앱이 받을 수 없는 권한이라, 스크립트가 shell 신원으로 권한을 부여해 실행합니다.</p>
+        </div>
+        <div class="note warn"><b>체크리스트</b> · 함수가 목록에 안 보이면 ① API 36+ 인지 ② Manifest의 XML 파일명이 맞는지 ③ <code>purge-allowlist-cache</code> 순으로 확인하세요.</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">26</div>
+</section>
+
+<!-- 26 · STEP2 상세 -->
+<section class="slide">
+  <div class="field"><b class="f3" style="opacity:.12"></b><b class="f2" style="opacity:.1"></b></div>
+  <div class="eyebrow">Section 03 · Step 2</div>
+  <h2 class="t">내 앱에 하나 열어보기<small>완성이 목적이 아닙니다. “무엇을 열어줄지” 고르는 게 절반입니다.</small></h2>
+  <div class="body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;height:100%">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card">
+          <h3><span class="dot b-blue"></span>좋은 App Function 고르는 기준</h3>
+          <ul class="sub" style="margin-top:10px">
+            <li>사용자가 <b>한 문장</b>으로 표현할 수 있는 행동인가</li>
+            <li>파라미터가 <b>말로 설명 가능한</b> 값인가 (내부 ID만 요구하지 않는가)</li>
+            <li>결과를 <b>문장으로 돌려줄</b> 수 있는가</li>
+            <li>먼저 <b>검색 함수</b>를 만들었는가 — <code>searchContacts</code>처럼, ID를 얻는 함수가 대개 먼저 필요합니다</li>
+          </ul>
+        </div>
+        <div class="steps">
+          <div class="step"><div class="n">1</div><div class="tx">의존성 + compileSdk 36<span>KSP 플러그인 함께 추가</span></div></div>
+          <div class="step"><div class="n">2</div><div class="tx"><code>AppFunctionService</code> 상속 abstract 클래스<span>@AppFunctionServiceEntryPoint 선언</span></div></div>
+          <div class="step"><div class="n">3</div><div class="tx">함수 1개 + KDoc 작성<span>@AppFunction(isDescribedByKDoc = true)</span></div></div>
+          <div class="step"><div class="n">4</div><div class="tx">Manifest에 서비스 등록<span>생성된 XML 파일명 확인</span></div></div>
+          <div class="step"><div class="n">5</div><div class="tx">Agent 앱 또는 adb로 호출 확인</div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="border-color:rgba(161,66,244,.3)">
+          <span class="tag" style="background:rgba(161,66,244,.12);color:#7627BB">TIP · AI 활용</span>
+          <h3 style="margin-top:12px">Android 공식 App Functions Skill</h3>
+          <p>Android 팀이 배포하는 스킬입니다. AI 코딩 도구에 연결하면 어노테이션·Manifest·KDoc 보일러플레이트를 규칙에 맞게 작성해줍니다.</p>
+          <div class="linkbox" style="margin-top:14px">
+            <div class="l">github.com/android/skills<br>&nbsp;&nbsp;/blob/main/device-ai/appfunctions/SKILL.md</div>
+          </div>
+        </div>
+        <div class="term" style="flex:1">
+          <div class="term-bar"><i class="b-red"></i><i class="b-yel"></i><i class="b-grn"></i><span>skills</span></div>
+          <div class="term-body sm"><span class="cm"># Android CLI로 스킬 환경 초기화</span>
+<span class="pr">$</span> <span class="kw">android init</span>
+
+<span class="cm"># 사용 가능한 스킬 확인</span>
+<span class="pr">$</span> <span class="kw">android skills</span>
+
+<span class="cm"># 이후 AI 도구에게 이렇게 시켜보세요</span>
+<span class="cm">#  "내 TodoRepository.addTodo 를</span>
+<span class="cm">#   App Function 으로 노출해줘"</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">27</div>
+</section>
+
+<!-- 27 · 발표 & 시상 -->
+<section class="slide">
+  <div class="field"><b class="f4" style="opacity:.16"></b><b class="f5" style="opacity:.12"></b><b class="f1" style="opacity:.12"></b></div>
+  <div class="eyebrow">Section 03 · Step 3</div>
+  <h2 class="t">발표 &amp; 시상</h2>
+  <div class="body">
+    <div style="display:flex;flex-direction:column;gap:20px;height:100%;justify-content:center">
+      <div style="font-size:34px;font-weight:600;line-height:1.5;letter-spacing:-.015em">
+        “동작 안 해도 됩니다.<br>어떤 <span style="background:linear-gradient(100deg,var(--blue),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent">App Function을 설계했는지</span>만 보여주세요.”
+      </div>
+      <div class="grid3" style="margin-top:10px">
+        <div class="card"><h3><span class="dot b-blue"></span>무엇을 열었나요</h3><p>어떤 기능을 에이전트에게 공개하기로 했는지</p></div>
+        <div class="card"><h3><span class="dot b-yel"></span>어떻게 설명했나요</h3><p>KDoc을 어떻게 썼는지 — 가장 재미있는 부분입니다</p></div>
+        <div class="card"><h3><span class="dot b-grn"></span>무엇이 막혔나요</h3><p>안 된 것도 공유해주세요. 다 같이 봅니다</p></div>
+      </div>
+      <div style="border-radius:16px;padding:22px 28px;display:flex;align-items:center;gap:20px;
+        background:linear-gradient(100deg,rgba(251,188,4,.14),rgba(234,67,53,.1));border:1px solid rgba(251,188,4,.35)">
+        <div style="font-size:40px">🏆</div>
+        <div style="font-size:18px;line-height:1.6">발표자 중 <b>추첨</b>을 통해 <b>《Jetpack Compose 메커니즘》</b> 신간 도서를 드립니다.</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">28</div>
+</section>
+
+<!-- 28 · 감사합니다 -->
+<section class="slide cover">
+  <div class="field"><b class="f1"></b><b class="f2"></b><b class="f3"></b><b class="f4"></b><b class="f5"></b></div>
+  <div class="cover-in">
+    <div class="kicker">Thank you</div>
+    <h1>감사합니다<br><span class="g">이제 여러분의 앱을<br>에이전트에게 열어주세요.</span></h1>
+    <div class="presenter">
+      <div class="dots"><i class="b-blue"></i><i class="b-red"></i><i class="b-yel"></i><i class="b-grn"></i></div>
+      류기민 · GDG Korea Android Organizer · 2026 I/O Extended
+    </div>
+  </div>
+  <div class="brandline"></div>
+  <div class="pageno">29</div>
+</section>
+
+<!-- 29 · 부록 표지 겸 API 1 -->
+<section class="slide">
+  <div class="field"><b class="f2" style="opacity:.11"></b><b class="f1" style="opacity:.1"></b></div>
+  <div class="eyebrow">Appendix</div>
+  <h2 class="t">androidx.appfunctions 주요 Public API ①<small>Annotation &amp; Class</small></h2>
+  <div class="body">
+    <div class="grid2" style="height:100%">
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag" style="background:rgba(161,66,244,.12);color:#7627BB">ANNOTATION</span>
+        <div class="api" style="margin-top:14px">
+          <div class="row"><b>@AppFunctionServiceEntryPoint</b> — 서비스 진입점 선언 (CLASS)</div>
+          <div class="row"><b>@AppFunction</b> — 함수 공개 (FUNCTION) · <code>isDescribedByKDoc</code></div>
+          <div class="row"><b>@AppFunctionSerializable</b> — 커스텀 데이터 타입 (CLASS)</div>
+          <div class="row"><b>@AppFunctionSchemaDefinition</b> — 표준 스키마 정의 (CLASS)</div>
+          <div class="row"><b>@AppFunctionSignature</b> — 함수 시그니처 명세 (CLASS)</div>
+          <div class="row"><b>@AppFunctionInstruction</b> — 모델용 추가 지시문</div>
+          <div class="row"><b>@AppFunctionStringValueConstraint</b> — 문자열 허용값(enum) 제약</div>
+          <div class="row"><b>@AppFunctionIntValueConstraint</b> — 정수 허용값 제약</div>
+        </div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag blue">CLASS · INTERFACE</span>
+        <div class="api" style="margin-top:14px">
+          <div class="row"><b>AppFunctionService</b> — 함수를 제공하는 서비스 base (API 36+)</div>
+          <div class="row"><b>AppFunctionManager</b> — 조회 · 실행 · 상태 제어 진입점</div>
+          <div class="row"><b>AppFunctionContext</b> — 호출자 패키지/신원 정보</div>
+          <div class="row"><b>AppFunctionData</b> — 타입 안전 파라미터 컨테이너 (Builder)</div>
+          <div class="row"><b>AppFunctionSearchSpec</b> — 함수 검색 조건</div>
+          <div class="row"><b>ExecuteAppFunctionRequest</b> / <b>Response</b> (Success · Error)</div>
+          <div class="row"><b>AppFunctionState</b> · <b>ObserveAppFunctionsEvent</b> — 상태 변화 관찰</div>
+          <div class="row"><b>AppFunctionConfiguration</b> (Builder · Provider) — 앱 전역 설정</div>
+          <div class="row"><b>AppFunctionUriGrant</b> · <b>AppFunctionTextResource</b> — 내장 직렬화 타입</div>
+          <div class="row"><b>metadata.*</b> — AppFunctionMetadata, ParameterMetadata,<br>&nbsp;&nbsp;ResponseMetadata, DataTypeMetadata 계층</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">30</div>
+</section>
+
+<!-- 30 · API 2 -->
+<section class="slide">
+  <div class="field"><b class="f3" style="opacity:.11"></b><b class="f5" style="opacity:.1"></b></div>
+  <div class="eyebrow">Appendix</div>
+  <h2 class="t">androidx.appfunctions 주요 Public API ②<small>Method &amp; Exception</small></h2>
+  <div class="body">
+    <div class="grid2" style="height:100%">
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag grn">METHOD · AppFunctionManager</span>
+        <div class="api" style="margin-top:14px">
+          <div class="row"><b>getInstance(context)</b> : AppFunctionManager?</div>
+          <div class="row"><b>searchAppFunctions(searchSpec)</b> : List&lt;AppFunctionMetadata&gt;<br>&nbsp;&nbsp;<span style="color:var(--ink-40)">requires EXECUTE / DISCOVER_APP_FUNCTIONS</span></div>
+          <div class="row"><b>executeAppFunction(request)</b> : ExecuteAppFunctionResponse<br>&nbsp;&nbsp;<span style="color:var(--ink-40)">requires EXECUTE_APP_FUNCTIONS</span></div>
+          <div class="row"><b>observeAppFunctions()</b> : Flow&lt;ObserveAppFunctionsEvent&gt;</div>
+          <div class="row"><b>isAppFunctionEnabled(functionId)</b> : Boolean</div>
+          <div class="row"><b>isAppFunctionEnabled(packageName, functionId)</b> : Boolean</div>
+          <div class="row"><b>setAppFunctionEnabled(functionId, newEnabledState)</b></div>
+          <div class="row"><b>handleAppFunction(request)</b> / <b>handleAppFunctions(requests)</b></div>
+          <div class="row" style="color:var(--ink-40)">STATE_DEFAULT(0) · STATE_ENABLED(1) · STATE_DISABLED(2)</div>
+        </div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column">
+        <span class="tag red">EXCEPTION</span>
+        <div class="api" style="margin-top:14px">
+          <div class="row" style="color:var(--ink)"><b>AppFunctionException</b> (root)</div>
+          <div class="row">├ <b>AppFunctionRequestException</b> — 호출이 잘못됨</div>
+          <div class="row">│&nbsp;&nbsp;├ InvalidArgument · ElementNotFound · ElementAlreadyExists</div>
+          <div class="row">│&nbsp;&nbsp;└ Denied · Disabled · FunctionNotFound · LimitExceeded</div>
+          <div class="row">├ <b>AppFunctionAppException</b> — 앱 쪽에서 처리 실패</div>
+          <div class="row">│&nbsp;&nbsp;└ AppUnknown · NotSupported · PermissionRequired</div>
+          <div class="row">├ <b>AppFunctionSystemException</b> — 플랫폼 오류</div>
+          <div class="row">│&nbsp;&nbsp;└ Cancelled · SystemUnknown</div>
+          <div class="row">└ <b>AppFunctionUnknownException</b></div>
+        </div>
+        <div class="note" style="margin-top:auto"><b>설계 포인트</b> · 예외 종류가 곧 에이전트의 <b>복구 전략</b>입니다. Request 계열이면 “다시 물어보기”, App 계열이면 “나중에 재시도”로 이어집니다.</div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">31</div>
+</section>
+
+<!-- 31 · 참고자료 -->
+<section class="slide">
+  <div class="field"><b class="f1" style="opacity:.11"></b><b class="f4" style="opacity:.1"></b></div>
+  <div class="eyebrow">References</div>
+  <h2 class="t">참고자료</h2>
+  <div class="body">
+    <div class="grid2" style="height:100%">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <h3><span class="dot b-blue"></span>공식 문서</h3>
+          <div class="linkbox" style="margin-top:12px">
+            <div class="l">developer.android.com/ai/appfunctions</div>
+            <div class="l">developer.android.com/ai/appfunctions/add-appfunctions</div>
+            <div class="l">developer.android.com/tools/agents/android-cli</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-red"></span>영상</h3>
+          <div class="linkbox" style="margin-top:12px">
+            <div class="l">youtu.be/8PxuWdjESfg?t=1205 &nbsp;<span style="color:var(--ink-40)">(I/O Android Keynote 20:05~)</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <h3><span class="dot b-grn"></span>샘플 &amp; 스킬</h3>
+          <div class="linkbox" style="margin-top:12px">
+            <div class="l">github.com/android/appfunctions</div>
+            <div class="l">github.com/android/skills<br>&nbsp;&nbsp;/blob/main/device-ai/appfunctions/SKILL.md</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3><span class="dot b-yel"></span>라이브러리 소스</h3>
+          <div class="linkbox" style="margin-top:12px">
+            <div class="l">github.com/androidx/androidx<br>&nbsp;&nbsp;/tree/androidx-main/appfunctions</div>
+          </div>
+          <p style="margin-top:10px">API 표면 전체는 <code>appfunctions/api/current.txt</code>에서 한눈에 볼 수 있습니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">32</div>
+</section>
+
+</div></div>
+<div id="hint">← → 이동 · F 전체화면</div>
+
+<script>
+(function(){
+  var deck = document.getElementById('deck');
+  var slides = Array.prototype.slice.call(deck.querySelectorAll('.slide'));
+  var bar = document.getElementById('bar');
+  var i = 0;
+
+  function fit(){
+    var s = Math.min(window.innerWidth / 1280, window.innerHeight / 720) * 0.97;
+    deck.style.transform = 'scale(' + s + ')';
+  }
+  function show(n){
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function(s, k){ s.classList.toggle('on', k === i); });
+    bar.style.width = ((i + 1) / slides.length * 100) + '%';
+    try { if (location.hash !== '#' + (i + 1)) history.replaceState(null, '', '#' + (i + 1)); } catch (e) {}
+  }
+  window.addEventListener('resize', fit);
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); show(i + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp'){ e.preventDefault(); show(i - 1); }
+    else if (e.key === 'Home'){ show(0); }
+    else if (e.key === 'End'){ show(slides.length - 1); }
+    else if (e.key === 'f' || e.key === 'F'){
+      if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen();
+    }
+  });
+  document.addEventListener('click', function(e){ show(i + (e.clientX < window.innerWidth * 0.25 ? -1 : 1)); });
+  window.addEventListener('hashchange', function(){
+    var n = parseInt((location.hash || '#1').slice(1), 10) - 1;
+    if (!isNaN(n) && n !== i) show(n);
+  });
+  fit();
+  show(parseInt((location.hash || '#1').slice(1), 10) - 1 || 0);
+})();
+</script>
+</body>
+</html>
