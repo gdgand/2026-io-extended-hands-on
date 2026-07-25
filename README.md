@@ -3,13 +3,10 @@
 GDG Korea Android 핸즈온 세션 — Android의 새로운 **App Functions** API로
 내 앱의 기능을 AI Agent에게 열어주는 방법을 직접 다뤄봅니다.
 
-> 발표 슬라이드는 이 저장소의 **[`index.html`](index.html)** 한 파일에 모두 담겨 있습니다.
-> (외부 의존성 없는 self-contained HTML)
+## 📽️ 발표 슬라이드
 
-## 슬라이드 보기
+### 👉 **https://gdgand.github.io/2026-io-extended-hands-on**
 
-- 🖥️ **GitHub Pages**: 저장소 Settings → Pages에서 static 배포를 켜면 공개 URL로 열립니다.
-- 📁 **로컬**: `index.html`을 브라우저로 그냥 열면 됩니다.
 - ⌨️ **조작**: `←` `→` / Space 이동 · `F` 전체화면 · 화면 좌측 25% 클릭 시 이전 슬라이드
 
 ## App Functions 란?
