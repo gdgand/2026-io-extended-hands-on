@@ -1328,7 +1328,16 @@ manager?.setAppFunctionEnabled(
       if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen();
     }
   });
-  document.addEventListener('click', function(e){ show(i + (e.clientX < window.innerWidth * 0.25 ? -1 : 1)); });
+  // Click-to-advance, but never when the user is selecting/copying text or dragging.
+  var downX = 0, downY = 0;
+  document.addEventListener('mousedown', function(e){ downX = e.clientX; downY = e.clientY; });
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (t && t.closest && t.closest('a, .code, .term, pre, code')) return; // don't hijack code/links
+    if (String(window.getSelection())) return;                        // text is selected → user is copying
+    if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) return; // it was a drag, not a click
+    show(i + (e.clientX < window.innerWidth * 0.25 ? -1 : 1));
+  });
   window.addEventListener('hashchange', function(){
     var n = parseInt((location.hash || '#1').slice(1), 10) - 1;
     if (!isNaN(n) && n !== i) show(n);
